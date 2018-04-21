@@ -16,6 +16,58 @@
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
+-- load love-nuklear
+package.cpath = package.cpath .. ";./love-nuklear/?.so"
+local nk = require 'nuklear'
+
+function love.load()
+	nk.init()
+end
+
+function love.update(dt)
+	nk.frameBegin()
+	if nk.windowBegin('Flower Defense!!!', 400 - 60, 300 - 60, 120, 120, 'border', 'title', 'movable') then
+		nk.layoutRow('dynamic', 30, 1)
+		if nk.button('Start Game') then
+			print('Starting Game...')
+		end
+		nk.layoutRow('dynamic', 30, 1)
+		if nk.button('Quit') then
+			love.event.quit(0)
+		end
+	end
+	nk.windowEnd()
+	nk.frameEnd()
+end
+
 function love.draw()
-	love.graphics.print("Flower Defense!!!", 400, 300)
+	nk.draw()
+end
+
+function love.keypressed(key, scancode, isrepeat)
+	nk.keypressed(key, scancode, isrepeat)
+end
+
+function love.keyreleased(key, scancode)
+	nk.keyreleased(key, scancode)
+end
+
+function love.mousepressed(x, y, button, istouch)
+	nk.mousepressed(x, y, button, istouch)
+end
+
+function love.mousereleased(x, y, button, istouch)
+	nk.mousereleased(x, y, button, istouch)
+end
+
+function love.mousemoved(x, y, dx, dy, istouch)
+	nk.mousemoved(x, y, dx, dy, istouch)
+end
+
+function love.textinput(text)
+	nk.textinput(text)
+end
+
+function love.wheelmoved(x, y)
+	nk.wheelmoved(x, y)
 end
