@@ -30,6 +30,7 @@ function love.load()
 end
 
 function love.update(dt)
+	-- update GUI dependent on current state
 	nk.frameBegin()
 	if currentState == "main_menu" then
 		if nk.windowBegin('Flower Defense!!!', 400 - 60, 300 - 60, 120, 120, 'border', 'title', 'movable') then
@@ -56,6 +57,7 @@ function love.update(dt)
 	end
 	nk.windowEnd()
 	nk.frameEnd()
+	-- update content dependent on current state
 end
 
 function love.draw()
@@ -68,30 +70,37 @@ function love.draw()
 end
 
 function love.keypressed(key, scancode, isrepeat)
+	-- process input for GUI
 	nk.keypressed(key, scancode, isrepeat)
 end
 
 function love.keyreleased(key, scancode)
+	-- process input for GUI
 	nk.keyreleased(key, scancode)
 end
 
 function love.mousepressed(x, y, button, istouch)
+	-- process input for GUI
 	nk.mousepressed(x, y, button, istouch)
 end
 
 function love.mousereleased(x, y, button, istouch)
+	-- process input for GUI
 	nk.mousereleased(x, y, button, istouch)
 end
 
 function love.mousemoved(x, y, dx, dy, istouch)
+	-- process input for GUI
 	nk.mousemoved(x, y, dx, dy, istouch)
 end
 
 function love.textinput(text)
+	-- process input for GUI
 	nk.textinput(text)
 end
 
 function love.wheelmoved(x, y)
+	-- process input for GUI
 	nk.wheelmoved(x, y)
 	-- process input dependent on current state
 	if currentState == "game" then
