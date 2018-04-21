@@ -22,10 +22,11 @@ local nk = require 'nuklear'
 
 function love.load()
 	nk.init()
+	love.graphics.setDefaultFilter("nearest", "nearest") -- avoid blurry scaling
 	landscape = love.graphics.newImage("assets/landscapeSketch.png")
 	--landscape:setWrap("repeat", "clamp")
 	landscapeData = love.image.newImageData("assets/landscapeSketch.png")
-	grassSprite = love.graphics.newImage("assets/grassTest.png")
+	grassSprite = love.graphics.newImage("assets/grass.png")
 	grassQuad = {}
 	for x = 0, 17 do
 		for y = 0, 6 do
@@ -46,9 +47,9 @@ function love.load()
 		end
 	end
 	grassBatch = love.graphics.newSpriteBatch(grassSprite, 1000)
-	for y = 1, #grass do
-		for x = 1, #grass[y] do
-			grassBatch:add(grassQuad[math.random(#grassQuad)], grass[y][x], y)
+	for y = 1, #grass, 8 do
+		for x = 1, #grass[y], 8 do
+			grassBatch:add(grassQuad[math.random(#grassQuad)], grass[y][x], y, 0, 1, 1+0.008*y)
 		end
 	end
 end
@@ -71,7 +72,7 @@ end
 
 function love.draw()
 	love.graphics.draw(landscape, view, 0)
-	love.graphics.draw(grassBatch, view, 0, 0, 1, 1, 8, 8)
+	love.graphics.draw(grassBatch, view, 0, 0, 1, 1, 5, 20)
 	nk.draw()
 end
 
