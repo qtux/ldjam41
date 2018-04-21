@@ -1,0 +1,3 @@
+[submodule "love-nuklear"]
+	path = love-nuklear
+	url = https://github.com/jamestn529/love-nuklear.git
