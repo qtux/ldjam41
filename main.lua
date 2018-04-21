@@ -22,6 +22,10 @@ local nk = require 'nuklear'
 
 function love.load()
 	nk.init()
+	landscape = love.graphics.newImage("assets/landscapeSketch.png")
+	love.window.setTitle("Flower Defence")
+	love.window.setMode(1920, 1080, {resizable=true, vsync=false, minwidth=600, minheight=400})
+	view = 0
 end
 
 function love.update(dt)
@@ -41,6 +45,7 @@ function love.update(dt)
 end
 
 function love.draw()
+	love.graphics.draw(landscape, view, 0)
 	nk.draw()
 end
 
@@ -70,4 +75,9 @@ end
 
 function love.wheelmoved(x, y)
 	nk.wheelmoved(x, y)
+	if y > 0 then
+		view = view + y*100
+	elseif y < 0 then
+		view = view + y*100
+	end
 end
