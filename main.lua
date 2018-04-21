@@ -23,9 +23,34 @@ local nk = require 'nuklear'
 function love.load()
 	nk.init()
 	landscape = love.graphics.newImage("assets/landscapeSketch.png")
+	--landscape:setWrap("repeat", "clamp")
+	landscapeData = love.image.newImageData("assets/landscapeSketch.png")
+	grassSprite = love.graphics.newImage("assets/grassTest.png")
+	grassQuad = {}
+	for x = 0, 17 do
+		for y = 0, 6 do
+			table.insert(grassQuad, love.graphics.newQuad(x*16,y*16,16,16,grassSprite:getDimensions()))
+		end
+	end
 	love.window.setTitle("Flower Defence")
 	love.window.setMode(1920, 1080, {resizable=true, vsync=false, minwidth=600, minheight=400})
 	view = 0
+	grass = {}
+	for y = 1, landscapeData:getHeight() do
+		grass[y] = {}
+		for x = 1, landscapeData:getWidth() do
+			local r, g, b, a = landscapeData:getPixel(x-1, y-1)
+			if g > 0.62 and g < 0.63 then
+				table.insert(grass[y], x)
+			end
+		end
+	end
+	grassBatch = love.graphics.newSpriteBatch(grassSprite, 1000)
+	for y = 1, #grass do
+		for x = 1, #grass[y] do
+			grassBatch:add(grassQuad[math.random(#grassQuad)], grass[y][x], y)
+		end
+	end
 end
 
 function love.update(dt)
@@ -46,6 +71,7 @@ end
 
 function love.draw()
 	love.graphics.draw(landscape, view, 0)
+	love.graphics.draw(grassBatch, view, 0, 0, 1, 1, 8, 8)
 	nk.draw()
 end
 
