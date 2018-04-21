@@ -22,6 +22,7 @@ local nk = require 'nuklear'
 
 function love.load()
 	nk.init()
+	currentState = "main_menu"
 	landscape = love.graphics.newImage("assets/landscapeSketch.png")
 	love.window.setTitle("Flower Defence")
 	love.window.setMode(1920, 1080, {resizable=true, vsync=false, minwidth=600, minheight=400})
@@ -30,14 +31,27 @@ end
 
 function love.update(dt)
 	nk.frameBegin()
-	if nk.windowBegin('Flower Defense!!!', 400 - 60, 300 - 60, 120, 120, 'border', 'title', 'movable') then
-		nk.layoutRow('dynamic', 30, 1)
-		if nk.button('Start Game') then
-			print('Starting Game...')
+	if currentState == "main_menu" then
+		if nk.windowBegin('Flower Defense!!!', 400 - 60, 300 - 60, 120, 120, 'border', 'title', 'movable') then
+			nk.layoutRow('dynamic', 30, 1)
+			if nk.button('Start Game') then
+				currentState = "game"
+			end
+			nk.layoutRow('dynamic', 30, 1)
+			if nk.button('Quit') then
+				love.event.quit(0)
+			end
 		end
-		nk.layoutRow('dynamic', 30, 1)
-		if nk.button('Quit') then
-			love.event.quit(0)
+	elseif currentState == "game" then
+		if nk.windowBegin('Game Controls', 0, 0, 120, 120, 'border', 'title', 'movable') then
+			nk.layoutRow('dynamic', 30, 1)
+			if nk.button('Exit to Menu') then
+				currentState = "main_menu"
+			end
+			nk.layoutRow('dynamic', 30, 1)
+			if nk.button('Quit') then
+				love.event.quit(0)
+			end
 		end
 	end
 	nk.windowEnd()
@@ -45,7 +59,11 @@ function love.update(dt)
 end
 
 function love.draw()
-	love.graphics.draw(landscape, view, 0)
+	-- draw dependent on current state
+	if currentState == "game" then
+		love.graphics.draw(landscape, view, 0)
+	end
+	-- draw GUI on top of the content
 	nk.draw()
 end
 
@@ -75,9 +93,12 @@ end
 
 function love.wheelmoved(x, y)
 	nk.wheelmoved(x, y)
-	if y > 0 then
-		view = view + y*100
-	elseif y < 0 then
-		view = view + y*100
+	-- process input dependent on current state
+	if currentState == "game" then
+		if y > 0 then
+			view = view + y*100
+		elseif y < 0 then
+			view = view + y*100
+		end
 	end
 end
