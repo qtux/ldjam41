@@ -102,6 +102,18 @@ function love.load()
 	morningBirds:setLooping(true)
 end
 
+local conf = {
+	-- time settings
+	t = {
+		sunPhase =	{value = math.pi / 2, min = 0, max = math.pi * 1.75},	-- sun phase
+		dawn =		{value = 5, min = 0, max = 24},		-- hour
+		sunrise =	{value = 6, min = 0, max = 24},		-- hour
+		sunset =	{value = 18, min = 0, max = 24},	-- hour
+		dusk =		{value = 19, min = 0, max = 24},	-- hour
+		speed =		{value = 10, min = 0, max = 16},	-- speedup exponent to the power of 2
+		flowDir =	{value = 1, min = -1, max = 1},		-- direction of time flow
+	}
+}
 function love.update(dt)
 	-- update content dependent on current state
 	if currentState == "menu" then
@@ -123,26 +135,20 @@ function love.update(dt)
 			love.event.quit(0)
 		end
 		-- do time calculation
-		local speedup = 1000
-		t = t + dt * speedup
-		local phase = math.pi / 2;
+		t = t + dt * 2^conf.t.speed.value * conf.t.flowDir.value
 		local horizon = 175
 		local hour = t / 3600 % 24
-		local dawn = 5
-		local sunrise = 6
-		local sunset = 18
-		local dusk = 19
 		local intensity
-		if hour > dawn and hour <= sunrise then
-			intensity = (1 - ((sunrise - hour) / (sunrise - dawn)))^2 * 0.8 + 0.2
+		if hour > conf.t.dawn.value and hour <= conf.t.sunrise.value then
+			intensity = (1 - ((conf.t.sunrise.value - hour) / (conf.t.sunrise.value - conf.t.dawn.value)))^2 * 0.8 + 0.2
 			love.audio.play(morningBirds)
 			love.audio.pause(nightBirds)
-		elseif hour > sunrise and hour <= sunset then
+		elseif hour > conf.t.sunrise.value and hour <= conf.t.sunset.value then
 			intensity = 1
 			love.audio.play(afternoonBirds)
 			love.audio.pause(morningBirds)
-		elseif hour > sunset and hour <= dusk then
-			intensity = ((dusk - hour) / (dusk - sunset))^2 * 0.8 + 0.2
+		elseif hour > conf.t.sunset.value and hour <= conf.t.dusk.value then
+			intensity = ((conf.t.dusk.value - hour) / (conf.t.dusk.value - conf.t.sunset.value))^2 * 0.8 + 0.2
 			love.audio.pause()
 		else
 			intensity = 0.2
@@ -150,8 +156,8 @@ function love.update(dt)
 		end
 		dayNightShader:send("intensity", intensity)
 		backgroundShader:send("intensity", intensity)
-		backgroundShader:send("sun_x", 1920 * math.cos(t/3600/24 * 2 * math.pi + phase) + 1920 * 2 + view)
-		backgroundShader:send("sun_y", 1080 * math.sin(t/3600/24 * 2 * math.pi + phase) + horizon)
+		backgroundShader:send("sun_x", 1920 * math.cos(t/3600/24 * 2 * math.pi + conf.t.sunPhase.value) + 1920 * 2 + view)
+		backgroundShader:send("sun_y", 1080 * math.sin(t/3600/24 * 2 * math.pi + conf.t.sunPhase.value) + horizon)
 		backgroundShader:send("sun_r", 50)
 	end
 end
