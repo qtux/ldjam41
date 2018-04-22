@@ -15,8 +15,11 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+suit = require "suit"
+
 function love.load()
 	currentState = "game"
+	menuState = "clear"
 
 	-- set window properties
 	love.window.setTitle("Flower Defence")
@@ -31,6 +34,18 @@ function love.load()
 	--landscape:setWrap("repeat", "clamp")
 	landscapeData = love.image.newImageData("assets/landscapeSketch.png")
 	grassSprite = love.graphics.newImage("assets/grass.png")
+
+	-- load menu icons which are listed in the initial menuIcons table at the corresponding position
+	menuIcons = {time=0, weather=1, menu=5, quit=6}
+	local menuIconsSheet = love.image.newImageData("assets/menuIcons.png")
+	for main_key, col in pairs(menuIcons) do
+		menuIcons[main_key] = {normal=0, hovered=1, active=2}
+		for sub_key, row in pairs(menuIcons[main_key]) do
+			local iconImgData = love.image.newImageData(32, 32)
+			iconImgData:paste(menuIconsSheet, 0, 0, 32 * col, 32 * row, 32, 32)
+			menuIcons[main_key][sub_key] = love.graphics.newImage(iconImgData)
+		end
+	end
 
 	-- load grass quads (sprite sheet elements)
 	grassQuad = {}
@@ -78,7 +93,24 @@ end
 
 function love.update(dt)
 	-- update content dependent on current state
-	if currentState == "game" then
+	if currentState == "menu" then
+		if suit.Button("Start Game", 100, 100, 300, 30).hit then
+			currentState = "game"
+		end
+		if suit.Button("Quit", 100, 150, 300, 30).hit then
+			love.event.quit(0)
+		end
+	elseif currentState == "game" then
+		-- check GUI input
+		if suit.ImageButton(nil, menuIcons["time"], 16, 16).hit then
+			menuState == "time"
+		end
+		if suit.ImageButton(nil, menuIcons["menu"], 16 + 32, 16).hit then
+			currentState = "menu"
+		end
+		if suit.ImageButton(nil, menuIcons["quit"], 16 + 2 * 32, 16).hit then
+			love.event.quit(0)
+		end
 		-- do time calculation
 		local speedup = 1000
 		t = t + dt * speedup
@@ -124,6 +156,7 @@ function love.draw()
 		love.graphics.setShader()
 	end
 	-- draw GUI on top of the content
+	suit.draw()
 end
 
 function love.keypressed(key, scancode, isrepeat)
