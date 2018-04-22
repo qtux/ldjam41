@@ -22,20 +22,30 @@ local nk = require 'nuklear'
 
 function love.load()
 	nk.init()
+	currentState = "main_menu"
+
+	-- set window properties
+	love.window.setTitle("Flower Defence")
+	love.window.setMode(1920, 1080, {resizable=true, vsync=false, minwidth=600, minheight=400})
+
+	-- set graphics properties
 	love.graphics.setDefaultFilter("nearest", "nearest") -- avoid blurry scaling
+	view = 0 -- initial camera x offset
+
+	-- load images
 	landscape = love.graphics.newImage("assets/landscapeSketch.png")
 	--landscape:setWrap("repeat", "clamp")
 	landscapeData = love.image.newImageData("assets/landscapeSketch.png")
 	grassSprite = love.graphics.newImage("assets/grass.png")
+
+	-- load grass quads (sprite sheet elements)
 	grassQuad = {}
 	for x = 0, 17 do
 		for y = 0, 6 do
 			table.insert(grassQuad, love.graphics.newQuad(x*16,y*16,16,16,grassSprite:getDimensions()))
 		end
 	end
-	love.window.setTitle("Flower Defence")
-	love.window.setMode(1920, 1080, {resizable=true, vsync=false, minwidth=600, minheight=400})
-	view = 0
+	-- get grass-green pixels
 	grass = {}
 	for y = 1, landscapeData:getHeight() do
 		grass[y] = {}
@@ -46,68 +56,100 @@ function love.load()
 			end
 		end
 	end
+	-- plant grass on grass-green pixels
 	grassBatch = love.graphics.newSpriteBatch(grassSprite, 1000)
 	for y = 1, #grass, 8 do
 		for x = 1, #grass[y], 8 do
 			grassBatch:add(grassQuad[math.random(#grassQuad)], grass[y][x], y, 0, 1, 1+0.008*y)
 		end
 	end
+
+	-- play music
 	afternoonBirds = love.audio.newSource("assets/sounds/afternoonBirds.ogg", "stream")
 	afternoonBirds:setLooping(true)
 	love.audio.play(afternoonBirds)
 end
 
 function love.update(dt)
+	-- update GUI dependent on current state
 	nk.frameBegin()
-	if nk.windowBegin('Flower Defense!!!', 400 - 60, 300 - 60, 120, 120, 'border', 'title', 'movable') then
-		nk.layoutRow('dynamic', 30, 1)
-		if nk.button('Start Game') then
-			print('Starting Game...')
+	if currentState == "main_menu" then
+		if nk.windowBegin('Flower Defense!!!', 400 - 60, 300 - 60, 120, 120, 'border', 'title', 'movable') then
+			nk.layoutRow('dynamic', 30, 1)
+			if nk.button('Start Game') then
+				currentState = "game"
+			end
+			nk.layoutRow('dynamic', 30, 1)
+			if nk.button('Quit') then
+				love.event.quit(0)
+			end
 		end
-		nk.layoutRow('dynamic', 30, 1)
-		if nk.button('Quit') then
-			love.event.quit(0)
+	elseif currentState == "game" then
+		if nk.windowBegin('Game Controls', 0, 0, 120, 120, 'border', 'title', 'movable') then
+			nk.layoutRow('dynamic', 30, 1)
+			if nk.button('Exit to Menu') then
+				currentState = "main_menu"
+			end
+			nk.layoutRow('dynamic', 30, 1)
+			if nk.button('Quit') then
+				love.event.quit(0)
+			end
 		end
 	end
 	nk.windowEnd()
 	nk.frameEnd()
+	-- update content dependent on current state
 end
 
 function love.draw()
-	love.graphics.draw(landscape, view, 0)
-	love.graphics.draw(grassBatch, view, 0, 0, 1, 1, 5, 20)
+	-- draw dependent on current state
+	if currentState == "game" then
+		love.graphics.draw(landscape, view, 0) -- background
+		love.graphics.draw(grassBatch, view, 0, 0, 1, 1, 5, 20) -- grass
+	end
+	-- draw GUI on top of the content
 	nk.draw()
 end
 
 function love.keypressed(key, scancode, isrepeat)
+	-- process input for GUI
 	nk.keypressed(key, scancode, isrepeat)
 end
 
 function love.keyreleased(key, scancode)
+	-- process input for GUI
 	nk.keyreleased(key, scancode)
 end
 
 function love.mousepressed(x, y, button, istouch)
+	-- process input for GUI
 	nk.mousepressed(x, y, button, istouch)
 end
 
 function love.mousereleased(x, y, button, istouch)
+	-- process input for GUI
 	nk.mousereleased(x, y, button, istouch)
 end
 
 function love.mousemoved(x, y, dx, dy, istouch)
+	-- process input for GUI
 	nk.mousemoved(x, y, dx, dy, istouch)
 end
 
 function love.textinput(text)
+	-- process input for GUI
 	nk.textinput(text)
 end
 
 function love.wheelmoved(x, y)
+	-- process input for GUI
 	nk.wheelmoved(x, y)
-	if y > 0 then
-		view = view + y*100
-	elseif y < 0 then
-		view = view + y*100
+	-- process input dependent on current state
+	if currentState == "game" then
+		if y > 0 then
+			view = view + y*100
+		elseif y < 0 then
+			view = view + y*100
+		end
 	end
 end
