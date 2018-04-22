@@ -154,6 +154,9 @@ end
 function love.keypressed(key, scancode, isrepeat)
 	-- process input for GUI
 	nk.keypressed(key, scancode, isrepeat)
+	if (key == "escape" or key == "q") and (currentState == "game" or currentState == "main_menu") then
+		love.event.quit(0)
+	end
 end
 
 function love.keyreleased(key, scancode)
