@@ -64,6 +64,15 @@ function love.load()
 		end
 	end
 
+	-- load shaders
+	local shaderStr = love.filesystem.read("shaders/background.frag")
+	backgroundShader = love.graphics.newShader(shaderStr)
+	shaderStr = love.filesystem.read("shaders/day_night.frag")
+	dayNightShader = love.graphics.newShader(shaderStr)
+
+	-- initialize global time
+	t = 0
+
 	-- play music
 	afternoonBirds = love.audio.newSource("assets/sounds/afternoonBirds.ogg", "stream")
 	afternoonBirds:setLooping(true)
@@ -99,13 +108,44 @@ function love.update(dt)
 	nk.windowEnd()
 	nk.frameEnd()
 	-- update content dependent on current state
+	if currentState == "game" then
+		-- do time calculation
+		local speedup = 10000
+		t = t + dt * speedup
+		local phase = math.pi / 2;
+		local horizon = 175
+		local hour = t / 3600 % 24
+		local dawn = 5
+		local sunrise = 6
+		local sunset = 18
+		local dusk = 19
+		local intensity
+		if hour > dawn and hour <= sunrise then
+			intensity = (1 - ((sunrise - hour) / (sunrise - dawn)))^2 * 0.8 + 0.2
+		elseif hour > sunrise and hour <= sunset then
+			intensity = 1
+		elseif hour > sunset and hour <= dusk then
+			intensity = ((dusk - hour) / (dusk - sunset))^2 * 0.8 + 0.2
+		else
+			intensity = 0.2
+		end
+		dayNightShader:send("intensity", intensity)
+		backgroundShader:send("intensity", intensity)
+		backgroundShader:send("sun_x", 1920 * math.cos(t/3600/24 * 2 * math.pi + phase) + 1920 * 2 + view)
+		backgroundShader:send("sun_y", 1080 * math.sin(t/3600/24 * 2 * math.pi + phase) + horizon)
+		backgroundShader:send("sun_r", 50)
+	end
 end
 
 function love.draw()
 	-- draw dependent on current state
 	if currentState == "game" then
+		love.graphics.setShader(backgroundShader)
+		love.graphics.rectangle('fill', 0, 0, 1920, 1080)
+		love.graphics.setShader(dayNightShader)
 		love.graphics.draw(landscape, view, 0) -- background
 		love.graphics.draw(grassBatch, view, 0, 0, 1, 1, 5, 20) -- grass
+		love.graphics.setShader()
 	end
 	-- draw GUI on top of the content
 	nk.draw()
