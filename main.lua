@@ -246,12 +246,12 @@ function love.mousepressed(x, y, button, istouch)
 		-- center standard sized sprite
 		spriteOffsetX = 8
 		spriteOffsetY = 16
-		mouse.x = mouse.x - spriteOffsetX
+		mouse.x = mouse.x - spriteOffsetX - view
 		mouse.y = mouse.y - spriteOffsetY
 		for index,value in ipairs(layers) do
 			scaleFactor = 0.004*value
 			if value >= mouse.y then
-				flowerBatches[index]:add(hand, mouse.x, value-(spriteOffsetY*scaleFactor), 0, 1, 1+scaleFactor, view)
+				flowerBatches[index]:add(hand, mouse.x-(spriteOffsetX*scaleFactor), value-(spriteOffsetY*scaleFactor), 0, 1+scaleFactor, 1+scaleFactor)
 				break
 			end
 		end
