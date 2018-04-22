@@ -20,6 +20,7 @@ suit = require "suit"
 function love.load()
 	currentState = "game"
 	menuState = "clear"
+	hand = nil
 
 	-- set window properties
 	love.window.setTitle("Flower Defence")
@@ -34,6 +35,7 @@ function love.load()
 	--landscape:setWrap("repeat", "clamp")
 	landscapeData = love.image.newImageData("assets/landscapeSketch.png")
 	grassSprite = love.graphics.newImage("assets/grass.png")
+	flowerSprite = love.graphics.newImage("assets/flower.png")
 
 	-- load menu icons which are listed in the initial menuIcons table at the corresponding position
 	menuIcons = {time=0, weather=1, menu=5, quit=6}
@@ -66,10 +68,19 @@ function love.load()
 		end
 	end
 	-- plant grass on grass-green pixels
-	grassBatch = love.graphics.newSpriteBatch(grassSprite, 1000)
+	layers = {}
+	grassBatches = {}
+	flowerBatches = {}
 	for y = 1, #grass, 8 do
-		for x = 1, #grass[y], 8 do
-			grassBatch:add(grassQuad[math.random(#grassQuad)], grass[y][x], y, 0, 1, 1+0.008*y)
+		if #grass[y] > 0 then
+			grassBatch = love.graphics.newSpriteBatch(grassSprite, 1000)
+			flowerBatch = love.graphics.newSpriteBatch(flowerSprite, 100)
+			for x = 1, #grass[y], 8 do
+				grassBatch:add(grassQuad[math.random(#grassQuad)], grass[y][x], y, 0, 1, 1+0.008*y)
+			end
+			table.insert(grassBatches, grassBatch)
+			table.insert(flowerBatches, flowerBatch)
+			table.insert(layers, y)
 		end
 	end
 
@@ -152,8 +163,16 @@ function love.draw()
 		love.graphics.rectangle('fill', 0, 0, 1920, 1080)
 		love.graphics.setShader(dayNightShader)
 		love.graphics.draw(landscape, view, 0) -- background
-		love.graphics.draw(grassBatch, view, 0, 0, 1, 1, 5, 20) -- grass
+		for index,value in ipairs(layers) do
+			love.graphics.draw(grassBatches[index], view, 0, 0, 1, 1, 5, 20) -- grass
+			love.graphics.draw(flowerBatches[index], view, 0, 0, 1, 1, 0, 0)--1+0.008*index) -- flowers
+		end
 		love.graphics.setShader()
+		if (hand ~= nil) then
+			mouse = {}
+			mouse.x, mouse.y = love.mouse.getPosition()
+			love.graphics.draw(flowerSprite, hand, mouse.x-20, mouse.y-20)
+		end
 	end
 	-- draw GUI on top of the content
 	suit.draw()
@@ -164,6 +183,9 @@ function love.keypressed(key, scancode, isrepeat)
 	if (key == "escape" or key == "q") and (currentState == "game" or currentState == "main_menu") then
 		love.event.quit(0)
 	end
+	if (key == "f") and (currentState == "game") then
+		hand = love.graphics.newQuad(96,0,16,32,flowerSprite:getDimensions())
+	end
 end
 
 function love.keyreleased(key, scancode)
@@ -172,6 +194,23 @@ end
 
 function love.mousepressed(x, y, button, istouch)
 	-- process input for GUI
+	if (hand ~= nil) then
+		mouse = {}
+		mouse.x, mouse.y = love.mouse.getPosition()
+		-- center standard sized sprite
+		spriteOffsetX = 8
+		spriteOffsetY = 16
+		mouse.x = mouse.x - spriteOffsetX
+		mouse.y = mouse.y - spriteOffsetY
+		for index,value in ipairs(layers) do
+			scaleFactor = 0.008*value
+			if value >= mouse.y then
+				flowerBatches[index]:add(hand, mouse.x, value-(spriteOffsetY*scaleFactor), 0, 1, 1+scaleFactor, view)
+				break
+			end
+		end
+		hand = nil
+	end
 end
 
 function love.mousereleased(x, y, button, istouch)
