@@ -1,0 +1,3 @@
+[submodule "suit"]
+	path = suit
+	url = https://github.com/qtux/suit.git
