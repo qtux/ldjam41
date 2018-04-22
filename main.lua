@@ -103,7 +103,7 @@ function love.update(dt)
 	elseif currentState == "game" then
 		-- check GUI input
 		if suit.ImageButton(nil, menuIcons["time"], 16, 16).hit then
-			menuState == "time"
+			menuState = "time"
 		end
 		if suit.ImageButton(nil, menuIcons["menu"], 16 + 32, 16).hit then
 			currentState = "menu"
