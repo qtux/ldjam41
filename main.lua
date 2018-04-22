@@ -70,14 +70,17 @@ function love.load()
 	-- play music
 	afternoonBirds = love.audio.newSource("assets/sounds/afternoonBirds.ogg", "stream")
 	afternoonBirds:setLooping(true)
-	love.audio.play(afternoonBirds)
+	nightBirds = love.audio.newSource("assets/sounds/nightingale.ogg", "stream")
+	nightBirds:setLooping(true)
+	morningBirds = love.audio.newSource("assets/sounds/morningBirds.ogg", "stream")
+	morningBirds:setLooping(true)
 end
 
 function love.update(dt)
 	-- update content dependent on current state
 	if currentState == "game" then
 		-- do time calculation
-		local speedup = 10000
+		local speedup = 1000
 		t = t + dt * speedup
 		local phase = math.pi / 2;
 		local horizon = 175
@@ -89,12 +92,18 @@ function love.update(dt)
 		local intensity
 		if hour > dawn and hour <= sunrise then
 			intensity = (1 - ((sunrise - hour) / (sunrise - dawn)))^2 * 0.8 + 0.2
+			love.audio.play(morningBirds)
+			love.audio.pause(nightBirds)
 		elseif hour > sunrise and hour <= sunset then
 			intensity = 1
+			love.audio.play(afternoonBirds)
+			love.audio.pause(morningBirds)
 		elseif hour > sunset and hour <= dusk then
 			intensity = ((dusk - hour) / (dusk - sunset))^2 * 0.8 + 0.2
+			love.audio.pause()
 		else
 			intensity = 0.2
+			love.audio.play(nightBirds)
 		end
 		dayNightShader:send("intensity", intensity)
 		backgroundShader:send("intensity", intensity)
