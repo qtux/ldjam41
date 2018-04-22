@@ -38,7 +38,7 @@ function love.load()
 	flowerSprite = love.graphics.newImage("assets/flower.png")
 
 	-- load menu icons which are listed in the initial menuIcons table at the corresponding position
-	menuIcons = {time=0, weather=1, menu=5, quit=6}
+	menuIcons = {time=0, weather=1, stationaryBeings=2, menu=5, quit=6}
 	local menuIconsSheet = love.image.newImageData("assets/menuIcons.png")
 	for main_key, col in pairs(menuIcons) do
 		menuIcons[main_key] = {normal=0, hovered=1, active=2}
@@ -47,6 +47,16 @@ function love.load()
 			iconImgData:paste(menuIconsSheet, 0, 0, 32 * col, 32 * row, 32, 32)
 			menuIcons[main_key][sub_key] = love.graphics.newImage(iconImgData)
 		end
+	end
+
+	-- load stationary beings menu icons
+	stationaryBeingsMenuIcons = {}
+	local stationaryMenuIconsSheet = love.image.newImageData("assets/stationaryMenuIcons.png")
+	stationaryBeingsMenuIcons[1] = {normal=0, hovered=1, active=2}
+	for sub_key, row in pairs(stationaryBeingsMenuIcons[1]) do
+		local iconImgData = love.image.newImageData(64, 64)
+		iconImgData:paste(stationaryMenuIconsSheet, 0, 0, 64 * 0, 64 * row, 64, 64)
+		stationaryBeingsMenuIcons[1][sub_key] = love.graphics.newImage(iconImgData)
 	end
 
 	-- load grass quads (sprite sheet elements)
@@ -93,6 +103,9 @@ function love.load()
 	-- initialize global time
 	t = 0
 
+	-- temporary initialization
+	flowerCount = 3
+
 	-- play music
 	afternoonBirds = love.audio.newSource("assets/sounds/afternoonBirds.ogg", "stream")
 	afternoonBirds:setLooping(true)
@@ -137,10 +150,13 @@ function love.update(dt)
 		if suit.ImageButton(nil, menuIcons["time"], 16, 16).hit then
 			menuState = toggleState(menuState, "time")
 		end
-		if suit.ImageButton(nil, menuIcons["menu"], 16 + 32, 16).hit then
+		if suit.ImageButton(nil, menuIcons["stationaryBeings"], 18+32*1, 16).hit then
+			menuState = toggleState(menuState, "stationaryBeings")
+		end
+		if suit.ImageButton(nil, menuIcons["menu"], 20+32*2, 16).hit then
 			currentState = "menu"
 		end
-		if suit.ImageButton(nil, menuIcons["quit"], 16 + 2 * 32, 16).hit then
+		if suit.ImageButton(nil, menuIcons["quit"], 22+32*3, 16).hit then
 			love.event.quit(0)
 		end
 		-- expose time configuration menu
@@ -148,6 +164,17 @@ function love.update(dt)
 			suit.Label("Time flow direction", 100, 80, 200, 20)
 			suit.Slider(conf.t.flowDir, 100, 100, 200, 20)
 			suit.Label(tostring(conf.t.flowDir.value), 300, 100, 200, 20)
+		end
+		-- stationary beings menu (includes plants)
+		if menuState == "stationaryBeings" then
+			suit.layout:reset(love.graphics.getWidth()/2 - 200, love.graphics.getHeight()/2 - 400)
+			suit.layout:padding(10,10)
+			if suit.ImageButton(nil, stationaryBeingsMenuIcons[1], suit.layout:col(64,64)).hit and flowerCount > 0 then
+				hand = love.graphics.newQuad(96,0,16,32,flowerSprite:getDimensions())
+				flowerCount = flowerCount - 1
+				menuState = nil
+			end
+			suit.Label(flowerCount, suit.layout:col())
 		end
 		-- do time calculation
 		t = t + dt * 2^conf.t.speed.value * conf.t.flowDir.value
@@ -224,7 +251,7 @@ function love.mousepressed(x, y, button, istouch)
 		mouse.x = mouse.x - spriteOffsetX
 		mouse.y = mouse.y - spriteOffsetY
 		for index,value in ipairs(layers) do
-			scaleFactor = 0.008*value
+			scaleFactor = 0.004*value
 			if value >= mouse.y then
 				flowerBatches[index]:add(hand, mouse.x, value-(spriteOffsetY*scaleFactor), 0, 1, 1+scaleFactor, view)
 				break
