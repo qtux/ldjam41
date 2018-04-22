@@ -200,17 +200,15 @@ function love.draw()
 end
 
 function love.keypressed(key, scancode, isrepeat)
-	-- process input for GUI
+	-- process key input for GUI
+	suit.keypressed(key)
+	-- process key input
 	if (key == "escape" or key == "q") and (currentState == "game" or currentState == "main_menu") then
 		love.event.quit(0)
 	end
 	if (key == "f") and (currentState == "game") then
 		hand = love.graphics.newQuad(96,0,16,32,flowerSprite:getDimensions())
 	end
-end
-
-function love.keyreleased(key, scancode)
-	-- process input for GUI
 end
 
 function love.mousepressed(x, y, button, istouch)
@@ -234,16 +232,9 @@ function love.mousepressed(x, y, button, istouch)
 	end
 end
 
-function love.mousereleased(x, y, button, istouch)
-	-- process input for GUI
-end
-
-function love.mousemoved(x, y, dx, dy, istouch)
-	-- process input for GUI
-end
-
 function love.textinput(text)
 	-- process input for GUI
+	suit.textinput(text)
 end
 
 function love.wheelmoved(x, y)
