@@ -52,6 +52,9 @@ function love.load()
 			grassBatch:add(grassQuad[math.random(#grassQuad)], grass[y][x], y, 0, 1, 1+0.008*y)
 		end
 	end
+	afternoonBirds = love.audio.newSource("assets/sounds/afternoonBirds.ogg", "stream")
+	afternoonBirds:setLooping(true)
+	love.audio.play(afternoonBirds)
 end
 
 function love.update(dt)
