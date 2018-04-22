@@ -15,14 +15,8 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
--- load love-nuklear
-package.cpath = package.cpath .. ";./love-nuklear/?.so"
-local nk = require 'nuklear'
-
 function love.load()
-	nk.init()
-	currentState = "main_menu"
+	currentState = "game"
 
 	-- set window properties
 	love.window.setTitle("Flower Defence")
@@ -80,33 +74,6 @@ function love.load()
 end
 
 function love.update(dt)
-	-- update GUI dependent on current state
-	nk.frameBegin()
-	if currentState == "main_menu" then
-		if nk.windowBegin('Flower Defense!!!', 400 - 60, 300 - 60, 120, 120, 'border', 'title', 'movable') then
-			nk.layoutRow('dynamic', 30, 1)
-			if nk.button('Start Game') then
-				currentState = "game"
-			end
-			nk.layoutRow('dynamic', 30, 1)
-			if nk.button('Quit') then
-				love.event.quit(0)
-			end
-		end
-	elseif currentState == "game" then
-		if nk.windowBegin('Game Controls', 0, 0, 120, 120, 'border', 'title', 'movable') then
-			nk.layoutRow('dynamic', 30, 1)
-			if nk.button('Exit to Menu') then
-				currentState = "main_menu"
-			end
-			nk.layoutRow('dynamic', 30, 1)
-			if nk.button('Quit') then
-				love.event.quit(0)
-			end
-		end
-	end
-	nk.windowEnd()
-	nk.frameEnd()
 	-- update content dependent on current state
 	if currentState == "game" then
 		-- do time calculation
@@ -148,12 +115,10 @@ function love.draw()
 		love.graphics.setShader()
 	end
 	-- draw GUI on top of the content
-	nk.draw()
 end
 
 function love.keypressed(key, scancode, isrepeat)
 	-- process input for GUI
-	nk.keypressed(key, scancode, isrepeat)
 	if (key == "escape" or key == "q") and (currentState == "game" or currentState == "main_menu") then
 		love.event.quit(0)
 	end
@@ -161,32 +126,26 @@ end
 
 function love.keyreleased(key, scancode)
 	-- process input for GUI
-	nk.keyreleased(key, scancode)
 end
 
 function love.mousepressed(x, y, button, istouch)
 	-- process input for GUI
-	nk.mousepressed(x, y, button, istouch)
 end
 
 function love.mousereleased(x, y, button, istouch)
 	-- process input for GUI
-	nk.mousereleased(x, y, button, istouch)
 end
 
 function love.mousemoved(x, y, dx, dy, istouch)
 	-- process input for GUI
-	nk.mousemoved(x, y, dx, dy, istouch)
 end
 
 function love.textinput(text)
 	-- process input for GUI
-	nk.textinput(text)
 end
 
 function love.wheelmoved(x, y)
 	-- process input for GUI
-	nk.wheelmoved(x, y)
 	-- process input dependent on current state
 	if currentState == "game" then
 		if y > 0 then
