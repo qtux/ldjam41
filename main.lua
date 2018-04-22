@@ -19,7 +19,7 @@ suit = require "suit"
 
 function love.load()
 	currentState = "game"
-	menuState = "clear"
+	menuState = nil
 	hand = nil
 
 	-- set window properties
@@ -114,6 +114,15 @@ local conf = {
 		flowDir =	{value = 1, min = -1, max = 1},		-- direction of time flow
 	}
 }
+
+function toggleState(old, new)
+	if old == new then
+		return nil
+	else
+		return new
+	end
+end
+
 function love.update(dt)
 	-- update content dependent on current state
 	if currentState == "menu" then
@@ -126,13 +135,19 @@ function love.update(dt)
 	elseif currentState == "game" then
 		-- check GUI input
 		if suit.ImageButton(nil, menuIcons["time"], 16, 16).hit then
-			menuState = "time"
+			menuState = toggleState(menuState, "time")
 		end
 		if suit.ImageButton(nil, menuIcons["menu"], 16 + 32, 16).hit then
 			currentState = "menu"
 		end
 		if suit.ImageButton(nil, menuIcons["quit"], 16 + 2 * 32, 16).hit then
 			love.event.quit(0)
+		end
+		-- expose time configuration menu
+		if menuState == "time" then
+			suit.Label("Time flow direction", 100, 80, 200, 20)
+			suit.Slider(conf.t.flowDir, 100, 100, 200, 20)
+			suit.Label(tostring(conf.t.flowDir.value), 300, 100, 200, 20)
 		end
 		-- do time calculation
 		t = t + dt * 2^conf.t.speed.value * conf.t.flowDir.value
