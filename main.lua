@@ -187,6 +187,12 @@ function round(num, digits)
 	return math.floor(num * multiplier + 0.5) / multiplier
 end
 
+function setSlider(var)
+	local value = tostring(round(var.value, 2))
+	suit.Label(var.str..": "..value.." "..var.unit, {align="left"}, suit.layout:row(300, 16))
+	suit.Slider(var, suit.layout:row())
+end
+
 function love.update(dt)
 	-- update content dependent on current state
 	if currentState == "menu" then
@@ -299,11 +305,6 @@ function love.update(dt)
 			suit.layout:reset(100, 100)
 			suit.layout:padding(4, 4)
 			-- draw sliders for time values
-			function setSlider(var)
-				local value = tostring(round(var.value, 2))
-				suit.Label(var.str..": "..value.." "..var.unit, {align="left"}, suit.layout:row(300, 16))
-				suit.Slider(var, suit.layout:row())
-			end
 			setSlider(conf.t.flowDir)
 			setSlider(conf.t.speed)
 			setSlider(conf.t.dawn)
