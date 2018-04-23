@@ -108,7 +108,7 @@ function love.load()
 	dayNightShader = love.graphics.newShader(shaderStr)
 
 	-- initialize global time
-	t = 0
+	t = 6*60*60
 
 	-- play music
 	afternoonBirds = love.audio.newSource("assets/sounds/afternoonBirds.ogg", "stream")
