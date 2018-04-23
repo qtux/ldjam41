@@ -290,8 +290,26 @@ function love.update(dt)
 							end
 							-- die of age
 							if individual["state"] ~= "dead" and individual["age"] >= checkBeing[individual["species"]]["maxAge"]*checkBeing[individual["species"]]["growSpeed"] then
-								print(individual["pollinated"])
-								print(individual["age"])
+								individual["state"] = "dead"
+								if individual["pollinated"] then
+									stationaryBeingsList[individual["species"]]["count"] = stationaryBeingsList[individual["species"]]["count"] + 3
+								end
+								flowerBatches[individual["layer"]]:set(individual["batchID"], 0, 0, 0, 0, 0)
+							end
+						end
+						-- thirsty
+						if checkBeing[individual["species"]]["maxThirstyDays"] > 0 then
+							-- show thirst
+							if individual["thirsty"] > checkBeing[individual["species"]]["maxThirstyDays"]/2 then
+								local quadOffset = 0
+								if checkBeing[individual["species"]]["maxAge"] > 0 then
+									quadOffset = math.floor(individual["age"]/checkBeing[individual["species"]]["growSpeed"])
+								end
+								local quad = love.graphics.newQuad(quadOffset*individual["sizeX"]+individual["quadX"],individual["sizeY"]+individual["quadY"],individual["sizeX"],individual["sizeY"],flowerSprite:getDimensions())
+								flowerBatches[individual["layer"]]:set(individual["batchID"], quad, individual["posX"], individual["posY"], 0, individual["scaleX"], individual["scaleY"])
+							end
+							-- die of thirst
+							if checkBeing[individual["species"]]["maxThirstyDays"] > 0 and individual["thirsty"] > checkBeing[individual["species"]]["maxThirstyDays"] then
 								individual["state"] = "dead"
 								if individual["pollinated"] then
 									stationaryBeingsList[individual["species"]]["count"] = stationaryBeingsList[individual["species"]]["count"] + 3
@@ -377,6 +395,11 @@ function love.update(dt)
 			state.rain.stop = state.rain.start + state.rain.duration
 			state.rain.raining = true
 			state.rain.enabled = false
+			for species, beings in pairs(stationaryBeings) do
+				for name, individual in pairs(beings) do
+					individual["thirsty"] = math.max(individual["thirsty"] - 2, 0)
+				end
+			end
 		end
 		-- stop rain
 		if state.rain.raining and state.t > state.rain.stop then
@@ -431,7 +454,7 @@ function love.update(dt)
 				--beedividual["posY"] = beedividual["posY"] + deltaY * (beedividual["speed"]/distance) * dt
 				-- check reached goal
 				if distance < beedividual["speed"] * dt then --beedividual["posX"] >= beedividual["target"]["posX"] - 2 and beedividual["posX"] <= beedividual["target"]["posX"] + 2 and beedividual["posY"] >= beedividual["target"]["posY"] - 2 and beedividual["posY"] <= beedividual["target"]["posY"] + 2 then
-					if beedividual["target"]["being"] then
+					if beedividual["target"]["being"] and beedividual["target"]["being"]["state"] ~= "dead" then
 						beedividual["target"]["being"]["pollinated"] = true
 					end
 					beedividual["target"] = nil
@@ -678,6 +701,7 @@ function love.mousepressed(x, y, button, istouch)
 					sleeping = false,
 					pollinated = false,
 					age = 0,
+					stage = 0,
 					species = hand["name"]
 				})
 				break
