@@ -57,7 +57,7 @@ function love.load()
 
 	-- stationary beings initialization
 	stationaryBeingsList = {
-		{count=3, hand={x=16, y=32, quad=love.graphics.newQuad(96,0,16,32,flowerSprite:getDimensions()), name="redFlower"}},
+		{count=3, hand={x=16, y=32, quad=love.graphics.newQuad(0,0,16,32,flowerSprite:getDimensions()), name="redFlower"}},
 		{count=1, hand={x=10*16, y=10*16, quad=love.graphics.newQuad(0,4*16,10*16,10*16,flowerSprite:getDimensions()), name="tree"}}
 	}
 	-- load stationary beings menu icons
@@ -134,11 +134,11 @@ end
 local checkBeing = {
 	redFlower = {
 		maxThirstyDays = 6,
-		maxAge = 10,
+		maxAge = 11,
 		growSpeed = 3,
 		mature = 6
 	},
-	tree = { -- trees shouldn't die right now
+	tree = { -- trees don't age right now
 		maxThirstyDays = -1,
 		maxAge = -1,
 		growSpeed = 1000,
@@ -227,8 +227,22 @@ function love.update(dt)
 					for name, individual in pairs(beings) do
 						individual["thirsty"] = individual["thirsty"] + 1
 						individual["sleeping"] = false
-						individual["age"] = individual["age"] + 1
+						-- age
+						if checkBeing[individual["species"]]["maxAge"] > 0 then
+							individual["age"] = individual["age"] + 1
+							-- grow
+							if individual["age"] % checkBeing[individual["species"]]["growSpeed"] == 0 then
+								local quad = love.graphics.newQuad((individual["age"]/checkBeing[individual["species"]]["growSpeed"])*individual["sizeX"]+individual["quadX"],individual["quadY"],individual["sizeX"],individual["sizeY"],flowerSprite:getDimensions())
+								flowerBatches[individual["layer"]]:set(individual["batchID"], quad, individual["posX"], individual["posY"], 0, individual["scaleX"], individual["scaleY"])
+							end
+							-- die of age
+							if individual["age"] > checkBeing[individual["species"]]["maxAge"]*checkBeing[individual["species"]]["growSpeed"] then
+								individual["state"] = "dead"
+								flowerBatches[individual["layer"]]:set(individual["batchID"], 0, 0, 0, 0, 0)
+							end
+						end
 						print(individual["species"], individual["age"])
+						print(individual["species"], individual["state"])
 					end
 				end
 				dawnUpdate = false
@@ -333,7 +347,7 @@ function love.keypressed(key, scancode, isrepeat)
 		love.event.quit(0)
 	end
 	if (key == "f") and (currentState == "game") then
-		hand = {x=16, y=32, quad=love.graphics.newQuad(96,0,16,32,flowerSprite:getDimensions()), name="redFlower"}
+		hand = {x=16, y=32, quad=love.graphics.newQuad(0,0,16,32,flowerSprite:getDimensions()), name="redFlower"}
 	end
 	if (key == "t") and (currentState == "game") then
 		hand = {x=10*16, y=10*16, quad=love.graphics.newQuad(0,4*16,10*16,10*16,flowerSprite:getDimensions()), name="tree"}
@@ -358,8 +372,8 @@ function love.mousepressed(x, y, button, istouch)
 				qx, qy, sx, sy = hand["quad"]:getViewport()
 				px = mouse.x-(spriteOffsetX*scaleFactor)
 				py = value-(spriteOffsetY*scaleFactor)
-				sx = 1+scaleFactor
-				sy = 1+scaleFactor
+				scx = 1+scaleFactor
+				scy = 1+scaleFactor
 				table.insert(stationaryBeings[hand["name"]], {
 					quadX = qx,
 					quadY = qy,
@@ -367,9 +381,10 @@ function love.mousepressed(x, y, button, istouch)
 					sizeY = sy,
 					posX = px,
 					posY = py,
-					scaleX = sx,
-					scaleY = sy,
-					batchID = flowerBatches[index]:add(hand["quad"], px, py, 0, sx, sy),
+					scaleX = scx,
+					scaleY = scy,
+					layer = index,
+					batchID = flowerBatches[index]:add(hand["quad"], px, py, 0, scx, scy),
 					state = "happy",
 					thirsty = 0,
 					sleeping = false,
