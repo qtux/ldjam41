@@ -285,7 +285,7 @@ function love.mousepressed(x, y, button, istouch)
 		-- center standard sized sprite
 		spriteOffsetX = hand["x"]/2
 		spriteOffsetY = hand["y"]
-		mouse.x = mouse.x - spriteOffsetX - view
+		mouse.x = (mouse.x - spriteOffsetX - view) % (4 * 1920)
 		mouse.y = mouse.y - spriteOffsetY
 		for index,value in ipairs(layers) do
 			scaleFactor = 0.004*value
