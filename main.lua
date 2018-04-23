@@ -122,13 +122,13 @@ end
 local conf = {
 	-- time settings
 	t = {
-		sunPhase =	{value = math.pi / 2, min = 0, max = math.pi * 1.75},	-- sun phase
-		dawn =		{value = 5, min = 0, max = 24},		-- hour
-		sunrise =	{value = 6, min = 0, max = 24},		-- hour
-		sunset =	{value = 18, min = 0, max = 24},	-- hour
-		dusk =		{value = 19, min = 0, max = 24},	-- hour
-		speed =		{value = 10, min = 0, max = 16},	-- speedup exponent to the power of 2
-		flowDir =	{value = 1, min = -1, max = 1},		-- direction of time flow
+		sunPhase =	{value = 0.5, min = 0, max = 1.75, str = "Sun phase", unit = "times pi"},
+		dawn =		{value = 5, min = 0, max = 24, str = "Dawn", unit = "h"},
+		sunrise =	{value = 6, min = 0, max = 24, str = "Sunrise", unit = "h"},
+		sunset =	{value = 18, min = 0, max = 24, str = "Sunset", unit = "h"},
+		dusk =		{value = 19, min = 0, max = 24, str = "Dusk", unit = "h"},
+		speed =		{value = 10, min = 0, max = 32, str = "Time speedup exponent", unit = ""},
+		flowDir =	{value = 1, min = -1, max = 1, str = "Time flow direction", unit = ""},
 	}
 }
 
@@ -138,6 +138,11 @@ function toggleState(old, new)
 	else
 		return new
 	end
+end
+
+function round(num, digits)
+	local multiplier = 10^digits
+	return math.floor(num * multiplier + 0.5) / multiplier
 end
 
 function love.update(dt)
@@ -163,12 +168,6 @@ function love.update(dt)
 		if suit.ImageButton(nil, menuIcons["quit"], 22+32*3, 16).hit then
 			love.event.quit(0)
 		end
-		-- expose time configuration menu
-		if menuState == "time" then
-			suit.Label("Time flow direction", 100, 80, 200, 20)
-			suit.Slider(conf.t.flowDir, 100, 100, 200, 20)
-			suit.Label(tostring(conf.t.flowDir.value), 300, 100, 200, 20)
-		end
 		-- stationary beings menu (includes plants)
 		if menuState == "stationaryBeings" then
 			suit.layout:reset(love.graphics.getWidth()/2 - 200, love.graphics.getHeight()/2 - 400)
@@ -186,6 +185,10 @@ function love.update(dt)
 		t = t + dt * 2^conf.t.speed.value * conf.t.flowDir.value
 		local horizon = 175
 		local hour = t / 3600 % 24
+		local minute = t / 60 % 60
+		local second = t % 60
+		local day = t / (3600 * 24) % 365 + 1
+		local year = t / (3600 * 24 * 365)
 		local intensity
 		if hour > conf.t.dawn.value and hour <= conf.t.sunrise.value then
 			intensity = (1 - ((conf.t.sunrise.value - hour) / (conf.t.sunrise.value - conf.t.dawn.value)))^2 * 0.8 + 0.2
@@ -204,9 +207,36 @@ function love.update(dt)
 		end
 		dayNightShader:send("intensity", intensity)
 		backgroundShader:send("intensity", intensity)
-		backgroundShader:send("sun_x", 1920 * math.cos(t/3600/24 * 2 * math.pi + conf.t.sunPhase.value) + 1920 * 2 + view)
-		backgroundShader:send("sun_y", 1080 * math.sin(t/3600/24 * 2 * math.pi + conf.t.sunPhase.value) + horizon)
+		backgroundShader:send("sun_x", 1920 * math.cos(t/3600/24 * 2 * math.pi + conf.t.sunPhase.value * math.pi) + 1920 * 2 + view)
+		backgroundShader:send("sun_y", 1080 * math.sin(t/3600/24 * 2 * math.pi + conf.t.sunPhase.value * math.pi) + horizon)
 		backgroundShader:send("sun_r", 50)
+		-- expose time configuration menu
+		if menuState == "time" then
+			-- reset layout
+			suit.layout:reset(100, 100)
+			suit.layout:padding(4, 4)
+			-- draw sliders for time values
+			function setSlider(var)
+				local value = tostring(round(var.value, 2))
+				suit.Label(var.str..": "..value.." "..var.unit, {align="left"}, suit.layout:row(300, 16))
+				suit.Slider(var, suit.layout:row())
+			end
+			setSlider(conf.t.flowDir)
+			setSlider(conf.t.speed)
+			setSlider(conf.t.dawn)
+			setSlider(conf.t.sunrise)
+			setSlider(conf.t.sunset)
+			setSlider(conf.t.dusk)
+			setSlider(conf.t.sunPhase)
+			-- show additional time information
+			function formatTime(seconds, minutes, hours)
+				s = string.format("%02.f", math.floor(seconds))
+				m = string.format("%02.f", math.floor(minutes))
+				h = string.format("%02.f", math.floor(hours))
+				return h..":"..m..":"..s
+			end
+			suit.Label("Current time: "..formatTime(second, minute, hour).." (day "..tostring(math.floor(day))..", year "..tostring(math.floor(year))..")", {align="left"}, suit.layout:row())
+		end
 	end
 end
 
