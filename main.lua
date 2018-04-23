@@ -301,12 +301,15 @@ function love.update(dt)
 						if checkBeing[individual["species"]]["maxThirstyDays"] > 0 then
 							-- show thirst
 							if individual["thirsty"] > checkBeing[individual["species"]]["maxThirstyDays"]/2 then
+								individual["state"] = "thirsty"
 								local quadOffset = 0
 								if checkBeing[individual["species"]]["maxAge"] > 0 then
 									quadOffset = math.floor(individual["age"]/checkBeing[individual["species"]]["growSpeed"])
 								end
 								local quad = love.graphics.newQuad(quadOffset*individual["sizeX"]+individual["quadX"],individual["sizeY"]+individual["quadY"],individual["sizeX"],individual["sizeY"],flowerSprite:getDimensions())
 								flowerBatches[individual["layer"]]:set(individual["batchID"], quad, individual["posX"], individual["posY"], 0, individual["scaleX"], individual["scaleY"])
+							else
+								individual["state"] = "happy"
 							end
 							-- die of thirst
 							if checkBeing[individual["species"]]["maxThirstyDays"] > 0 and individual["thirsty"] > checkBeing[individual["species"]]["maxThirstyDays"] then
@@ -319,6 +322,11 @@ function love.update(dt)
 						end
 						--print(individual["species"], individual["age"])
 						--print(individual["species"], individual["state"])
+					end
+				end
+				for species, beings in pairs(movingBeings) do
+					for name, individual in pairs(beings) do
+						individual["sleeping"] = false
 					end
 				end
 			end
@@ -347,6 +355,11 @@ function love.update(dt)
 				print(nextUpdate)
 				love.audio.pause()
 				for species, beings in pairs(stationaryBeings) do
+					for name, individual in pairs(beings) do
+						individual["sleeping"] = true
+					end
+				end
+				for species, beings in pairs(movingBeings) do
 					for name, individual in pairs(beings) do
 						individual["sleeping"] = true
 					end
@@ -419,7 +432,7 @@ function love.update(dt)
 		-- do animal behaviour update
 		-- bee
 		for beename, beedividual in pairs(movingBeings["bee"]) do
-			if beedividual["target"] == nil and not beedividual["sleeping"] then
+			if beedividual["target"] == nil and not beedividual["sleeping"] and not state.rain.raining then
 				for species, beings in pairs(stationaryBeings) do
 					for name, individual in pairs(beings) do
 						local checkIndividual = checkBeing[individual["species"]]
@@ -433,11 +446,12 @@ function love.update(dt)
 					end
 				end
 			end
-			if beedividual["target"] == nil and not beedividual["sleeping"] then
+			-- return home if there is no target left, it's time to sleep or raining
+			if beedividual["target"] == nil or beedividual["sleeping"] or state.rain.raining then
 				beedividual["target"] = beedividual["home"]
 				beedividual["target"]["being"] = nil
 			end
-			if beedividual["target"] ~= nil and not beedividual["sleeping"] then
+			if beedividual["target"] ~= nil then
 				-- move
 				deltaX = beedividual["target"]["posX"] - beedividual["posX"]
 				deltaY = beedividual["target"]["posY"] - beedividual["posY"]
