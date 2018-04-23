@@ -110,6 +110,12 @@ function love.load()
 	backgroundShader = love.graphics.newShader(shaderStr)
 	shaderStr = love.filesystem.read("shaders/day_night.frag")
 	dayNightShader = love.graphics.newShader(shaderStr)
+	shaderStr = love.filesystem.read("shaders/wrap.frag")
+	wrapShader = love.graphics.newShader(shaderStr)
+
+	-- initialise canvas
+	canvas = love.graphics.newCanvas(4 * 1920, 1080)
+	canvas:setWrap("repeat", "clampzero")
 
 	-- initialize global time
 	t = 6*60*60
@@ -237,6 +243,7 @@ function love.update(dt)
 			love.audio.play(nightBirds)
 		end
 		dayNightShader:send("intensity", intensity)
+		wrapShader:send("x_offset", view/(1920 * 4))
 		backgroundShader:send("intensity", intensity)
 		backgroundShader:send("sun_x", 1920 * math.cos(t/3600/24 * 2 * math.pi + conf.t.sunPhase.value * math.pi) + 1920 * 2 + view)
 		backgroundShader:send("sun_y", 1080 * math.sin(t/3600/24 * 2 * math.pi + conf.t.sunPhase.value * math.pi) + horizon)
@@ -268,21 +275,33 @@ function love.update(dt)
 			end
 			suit.Label("Current time: "..formatTime(second, minute, hour).." (day "..tostring(math.floor(day))..", year "..tostring(math.floor(year))..")", {align="left"}, suit.layout:row())
 		end
+		-- render background and landscape to canvas
+		love.graphics.setCanvas(canvas)
+		love.graphics.clear()
+		love.graphics.setShader(backgroundShader)
+		love.graphics.rectangle('fill', 0, 0, 1920*4, 1080)
+		love.graphics.setShader(dayNightShader)
+		love.graphics.draw(landscape)
+		love.graphics.setShader()
+		love.graphics.setCanvas()
 	end
 end
 
 function love.draw()
 	-- draw dependent on current state
 	if currentState == "game" then
-		love.graphics.setShader(backgroundShader)
-		love.graphics.rectangle('fill', 0, 0, 1920, 1080)
+		-- draw wrapped canvas
+		love.graphics.setShader(wrapShader)
+		love.graphics.draw(canvas)
+		love.graphics.setShader()
+		-- draw foreground
 		love.graphics.setShader(dayNightShader)
-		love.graphics.draw(landscape, view, 0) -- background
 		for index,value in ipairs(layers) do
 			love.graphics.draw(grassBatches[index], view, 0, 0, 1, 1, 5, 20) -- grass
 			love.graphics.draw(flowerBatches[index], view, 0, 0, 1, 1, 0, 0)--1+0.008*index) -- flowers
 		end
 		love.graphics.setShader()
+		-- draw items in hand
 		if (hand ~= nil) then
 			mouse = {}
 			mouse.x, mouse.y = love.mouse.getPosition()
@@ -316,7 +335,7 @@ function love.mousepressed(x, y, button, istouch)
 		-- center standard sized sprite
 		spriteOffsetX = hand["x"]/2
 		spriteOffsetY = hand["y"]
-		mouse.x = mouse.x - spriteOffsetX - view
+		mouse.x = (mouse.x - spriteOffsetX - view) % (4 * 1920)
 		mouse.y = mouse.y - spriteOffsetY
 		for index,value in ipairs(layers) do
 			scaleFactor = 0.004*value
@@ -362,10 +381,6 @@ function love.wheelmoved(x, y)
 	-- process input for GUI
 	-- process input dependent on current state
 	if currentState == "game" then
-		if y > 0 then
-			view = view + y*100
-		elseif y < 0 then
-			view = view + y*100
-		end
+		view = view + y * 100
 	end
 end
