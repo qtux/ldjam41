@@ -49,14 +49,21 @@ function love.load()
 		end
 	end
 
+	-- stationary beings initialization
+	stationaryBeingsList = {
+		{count=3, hand={x=16, y=32, quad=love.graphics.newQuad(96,0,16,32,flowerSprite:getDimensions())}}, -- red flower
+		{count=1, hand={x=10*16, y=10*16, quad=love.graphics.newQuad(0,4*16,10*16,10*16,flowerSprite:getDimensions())}} -- tree
+	}
 	-- load stationary beings menu icons
 	stationaryBeingsMenuIcons = {}
 	local stationaryMenuIconsSheet = love.image.newImageData("assets/stationaryMenuIcons.png")
-	stationaryBeingsMenuIcons[1] = {normal=0, hovered=1, active=2}
-	for sub_key, row in pairs(stationaryBeingsMenuIcons[1]) do
-		local iconImgData = love.image.newImageData(64, 64)
-		iconImgData:paste(stationaryMenuIconsSheet, 0, 0, 64 * 0, 64 * row, 64, 64)
-		stationaryBeingsMenuIcons[1][sub_key] = love.graphics.newImage(iconImgData)
+	for i = 1, #stationaryBeingsList do
+		stationaryBeingsMenuIcons[i] = {normal=0, hovered=1, active=2}
+		for sub_key, row in pairs(stationaryBeingsMenuIcons[i]) do
+			local iconImgData = love.image.newImageData(64, 64)
+			iconImgData:paste(stationaryMenuIconsSheet, 0, 0, 64 * (i-1), 64 * row, 64, 64)
+			stationaryBeingsMenuIcons[i][sub_key] = love.graphics.newImage(iconImgData)
+		end
 	end
 
 	-- load grass quads (sprite sheet elements)
@@ -102,9 +109,6 @@ function love.load()
 
 	-- initialize global time
 	t = 0
-
-	-- temporary initialization
-	flowerCount = 3
 
 	-- play music
 	afternoonBirds = love.audio.newSource("assets/sounds/afternoonBirds.ogg", "stream")
@@ -169,12 +173,14 @@ function love.update(dt)
 		if menuState == "stationaryBeings" then
 			suit.layout:reset(love.graphics.getWidth()/2 - 200, love.graphics.getHeight()/2 - 400)
 			suit.layout:padding(10,10)
-			if suit.ImageButton(nil, stationaryBeingsMenuIcons[1], suit.layout:col(64,64)).hit and flowerCount > 0 then
-				hand = love.graphics.newQuad(96,0,16,32,flowerSprite:getDimensions())
-				flowerCount = flowerCount - 1
-				menuState = nil
+			for entry = 1, #stationaryBeingsList do
+				if suit.ImageButton(nil, stationaryBeingsMenuIcons[entry], suit.layout:col(64,64)).hit and stationaryBeingsList[entry]["count"] > 0 then
+					hand = stationaryBeingsList[entry]["hand"]
+					stationaryBeingsList[entry]["count"] = stationaryBeingsList[entry]["count"] - 1
+					menuState = nil
+				end
+				suit.Label(stationaryBeingsList[entry]["count"], suit.layout:col())
 			end
-			suit.Label(flowerCount, suit.layout:col())
 		end
 		-- do time calculation
 		t = t + dt * 2^conf.t.speed.value * conf.t.flowDir.value
@@ -219,7 +225,7 @@ function love.draw()
 		if (hand ~= nil) then
 			mouse = {}
 			mouse.x, mouse.y = love.mouse.getPosition()
-			love.graphics.draw(flowerSprite, hand, mouse.x-20, mouse.y-20)
+			love.graphics.draw(flowerSprite, hand["quad"], mouse.x-20, mouse.y-20)
 		end
 	end
 	-- draw GUI on top of the content
@@ -234,7 +240,10 @@ function love.keypressed(key, scancode, isrepeat)
 		love.event.quit(0)
 	end
 	if (key == "f") and (currentState == "game") then
-		hand = love.graphics.newQuad(96,0,16,32,flowerSprite:getDimensions())
+		hand = {x=16, y=32, quad=love.graphics.newQuad(96,0,16,32,flowerSprite:getDimensions())}
+	end
+	if (key == "t") and (currentState == "game") then
+		hand = {x=10*16, y=10*16, quad=love.graphics.newQuad(0,4*16,10*16,10*16,flowerSprite:getDimensions())}
 	end
 end
 
@@ -244,14 +253,14 @@ function love.mousepressed(x, y, button, istouch)
 		mouse = {}
 		mouse.x, mouse.y = love.mouse.getPosition()
 		-- center standard sized sprite
-		spriteOffsetX = 8
-		spriteOffsetY = 16
+		spriteOffsetX = hand["x"]/2
+		spriteOffsetY = hand["y"]
 		mouse.x = mouse.x - spriteOffsetX - view
 		mouse.y = mouse.y - spriteOffsetY
 		for index,value in ipairs(layers) do
 			scaleFactor = 0.004*value
 			if value >= mouse.y then
-				flowerBatches[index]:add(hand, mouse.x-(spriteOffsetX*scaleFactor), value-(spriteOffsetY*scaleFactor), 0, 1+scaleFactor, 1+scaleFactor)
+				flowerBatches[index]:add(hand["quad"], mouse.x-(spriteOffsetX*scaleFactor), value-(spriteOffsetY*scaleFactor), 0, 1+scaleFactor, 1+scaleFactor)
 				break
 			end
 		end
