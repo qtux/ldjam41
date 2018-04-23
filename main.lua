@@ -56,6 +56,7 @@ local conf = {
 -- current state with their initial values
 local state = {
 	t = 6*60*60,			-- current time
+	nextUpdate = "dusk",	-- next state update time
 	sunIntensity = 1,		-- current sun intensity (should be between 0.2 and 1)
 	view_offset = 0,		-- camera x offset
 }
@@ -71,8 +72,6 @@ function love.load()
 	movingBeings = {
 		bee = {}
 	}
-	dawnUpdate = true
-	duskUpdate = true
 
 	-- set window properties
 	love.window.setTitle("Flower Defence")
@@ -260,8 +259,12 @@ function love.update(dt)
 		local day = state.t / (3600 * 24) % 365 + 1
 		local year = state.t / (3600 * 24 * 365)
 		if hour > conf.t.dawn.value and hour <= conf.t.sunrise.value then
+			-- continuous updates
 			state.sunIntensity = (1 - ((conf.t.sunrise.value - hour) / (conf.t.sunrise.value - conf.t.dawn.value)))^2 * 0.8 + 0.2
-			if dawnUpdate then
+
+			-- one-shot updates
+			if nextUpdate == "dawn" then
+				print(nextUpdate)
 				love.audio.play(morningBirds)
 				love.audio.pause(nightBirds)
 
@@ -293,29 +296,52 @@ function love.update(dt)
 						--print(individual["species"], individual["state"])
 					end
 				end
-				dawnUpdate = false
 			end
+
+			-- set next one-shot update time
+			nextUpdate = "day"
 		elseif hour > conf.t.sunrise.value and hour <= conf.t.sunset.value then
+			-- continuous updates
 			state.sunIntensity = 1
-			love.audio.play(afternoonBirds)
-			love.audio.pause(morningBirds)
-			dawnUpdate = true
+
+			-- one-shot updates
+			if nextUpdate == "day" then
+				print(nextUpdate)
+				love.audio.play(afternoonBirds)
+				love.audio.pause(morningBirds)
+			end
+
+			-- set next one-shot update time
+			nextUpdate = "dusk"
 		elseif hour > conf.t.sunset.value and hour <= conf.t.dusk.value then
+			-- continuous updates
 			state.sunIntensity = ((conf.t.dusk.value - hour) / (conf.t.dusk.value - conf.t.sunset.value))^2 * 0.8 + 0.2
-			love.audio.pause()
-			-- update beings state
-			if duskUpdate then
+
+			-- one-shot updates
+			if nextUpdate == "dusk" then
+				print(nextUpdate)
+				love.audio.pause()
 				for species, beings in pairs(stationaryBeings) do
 					for name, individual in pairs(beings) do
 						individual["sleeping"] = true
 					end
 				end
-				duskUpdate = false
 			end
+
+			-- set next one-shot update time
+			nextUpdate = "night"
 		else
+			-- continuous updates
 			state.sunIntensity = 0.2
-			love.audio.play(nightBirds)
-			duskUpdate = true
+
+			-- one-shot updates
+			if nextUpdate == "night" then
+				print(nextUpdate)
+				love.audio.play(nightBirds)
+			end
+
+			-- set next one-shot update time
+			nextUpdate = "dawn"
 		end
 
 		-- do weather calculation
