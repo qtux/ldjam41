@@ -307,10 +307,6 @@ function love.wheelmoved(x, y)
 	-- process input for GUI
 	-- process input dependent on current state
 	if currentState == "game" then
-		if y > 0 then
-			view = view + y*100
-		elseif y < 0 then
-			view = view + y*100
-		end
+		view = view + y * 100
 	end
 end
