@@ -17,6 +17,38 @@
 
 suit = require "suit"
 
+local conf = {
+	-- time settings
+	t = {
+		sunPhase =	{value = 0.5, min = 0, max = 1.75, str = "Sun phase", unit = "times pi"},
+		dawn =		{value = 5, min = 0, max = 24, str = "Dawn", unit = "h"},
+		sunrise =	{value = 6, min = 0, max = 24, str = "Sunrise", unit = "h"},
+		sunset =	{value = 18, min = 0, max = 24, str = "Sunset", unit = "h"},
+		dusk =		{value = 19, min = 0, max = 24, str = "Dusk", unit = "h"},
+		speed =		{value = 10, min = 0, max = 32, str = "Time speedup exponent", unit = ""},
+		flowDir =	{value = 1, min = -1, max = 1, str = "Time flow direction", unit = ""},
+	},
+	-- weather settings
+	-- world settings
+	world = {
+		horizon = 175,
+		w = 4 * 1920,
+		h = 1080,
+	},
+	-- view settings
+	view = {
+		w = 1920,
+		h = 1080,
+	},
+}
+
+-- current state with their initial values
+local state = {
+	t = 6*60*60,			-- current time
+	sunIntensity = 1,		-- current sun intensity (should be between 0.2 and 1)
+	view_offset = 0,		-- camera x offset
+}
+
 function love.load()
 	currentState = "game"
 	menuState = nil
@@ -30,11 +62,10 @@ function love.load()
 
 	-- set window properties
 	love.window.setTitle("Flower Defence")
-	love.window.setMode(1920, 1080, {resizable=true, vsync=false, minwidth=600, minheight=400})
+	love.window.setMode(conf.view.w, conf.view.h, {resizable=false, vsync=false})
 
 	-- set graphics properties
 	love.graphics.setDefaultFilter("nearest", "nearest") -- avoid blurry scaling
-	view = 0 -- initial camera x offset
 
 	-- load images
 	landscape = love.graphics.newImage("assets/landscapeSketch.png")
@@ -116,11 +147,8 @@ function love.load()
 	wrapShader = love.graphics.newShader(shaderStr)
 
 	-- initialise canvas
-	canvas = love.graphics.newCanvas(4 * 1920, 1080)
+	canvas = love.graphics.newCanvas(conf.world.w, conf.world.h)
 	canvas:setWrap("repeat", "clampzero")
-
-	-- initialize global time
-	t = 6*60*60
 
 	-- play music
 	afternoonBirds = love.audio.newSource("assets/sounds/afternoonBirds.ogg", "stream")
@@ -143,19 +171,6 @@ local checkBeing = {
 		maxAge = -1,
 		growSpeed = 1000,
 		mature = 0
-	}
-}
-
-local conf = {
-	-- time settings
-	t = {
-		sunPhase =	{value = 0.5, min = 0, max = 1.75, str = "Sun phase", unit = "times pi"},
-		dawn =		{value = 5, min = 0, max = 24, str = "Dawn", unit = "h"},
-		sunrise =	{value = 6, min = 0, max = 24, str = "Sunrise", unit = "h"},
-		sunset =	{value = 18, min = 0, max = 24, str = "Sunset", unit = "h"},
-		dusk =		{value = 19, min = 0, max = 24, str = "Dusk", unit = "h"},
-		speed =		{value = 10, min = 0, max = 32, str = "Time speedup exponent", unit = ""},
-		flowDir =	{value = 1, min = -1, max = 1, str = "Time flow direction", unit = ""},
 	}
 }
 
@@ -209,16 +224,14 @@ function love.update(dt)
 			end
 		end
 		-- do time calculation
-		t = t + dt * 2^conf.t.speed.value * conf.t.flowDir.value
-		local horizon = 175
-		local hour = t / 3600 % 24
-		local minute = t / 60 % 60
-		local second = t % 60
-		local day = t / (3600 * 24) % 365 + 1
-		local year = t / (3600 * 24 * 365)
-		local intensity
+		state.t = state.t + dt * 2^conf.t.speed.value * conf.t.flowDir.value
+		local hour = state.t / 3600 % 24
+		local minute = state.t / 60 % 60
+		local second = state.t % 60
+		local day = state.t / (3600 * 24) % 365 + 1
+		local year = state.t / (3600 * 24 * 365)
 		if hour > conf.t.dawn.value and hour <= conf.t.sunrise.value then
-			intensity = (1 - ((conf.t.sunrise.value - hour) / (conf.t.sunrise.value - conf.t.dawn.value)))^2 * 0.8 + 0.2
+			state.sunIntensity = (1 - ((conf.t.sunrise.value - hour) / (conf.t.sunrise.value - conf.t.dawn.value)))^2 * 0.8 + 0.2
 			love.audio.play(morningBirds)
 			love.audio.pause(nightBirds)
 			-- update beings state
@@ -248,12 +261,12 @@ function love.update(dt)
 				dawnUpdate = false
 			end
 		elseif hour > conf.t.sunrise.value and hour <= conf.t.sunset.value then
-			intensity = 1
+			state.sunIntensity = 1
 			love.audio.play(afternoonBirds)
 			love.audio.pause(morningBirds)
 			dawnUpdate = true
 		elseif hour > conf.t.sunset.value and hour <= conf.t.dusk.value then
-			intensity = ((conf.t.dusk.value - hour) / (conf.t.dusk.value - conf.t.sunset.value))^2 * 0.8 + 0.2
+			state.sunIntensity = ((conf.t.dusk.value - hour) / (conf.t.dusk.value - conf.t.sunset.value))^2 * 0.8 + 0.2
 			love.audio.pause()
 			-- update beings state
 			if duskUpdate then
@@ -265,15 +278,15 @@ function love.update(dt)
 				duskUpdate = false
 			end
 		else
-			intensity = 0.2
+			state.sunIntensity = 0.2
 			love.audio.play(nightBirds)
 			duskUpdate = true
 		end
-		dayNightShader:send("intensity", intensity)
-		wrapShader:send("x_offset", view/(1920 * 4))
-		backgroundShader:send("intensity", intensity)
-		backgroundShader:send("sun_x", 1920 * math.cos(t/3600/24 * 2 * math.pi + conf.t.sunPhase.value * math.pi) + 1920 * 2 + view)
-		backgroundShader:send("sun_y", 1080 * math.sin(t/3600/24 * 2 * math.pi + conf.t.sunPhase.value * math.pi) + horizon)
+		dayNightShader:send("intensity", state.sunIntensity)
+		wrapShader:send("x_offset", state.view_offset / conf.world.w)
+		backgroundShader:send("intensity", state.sunIntensity)
+		backgroundShader:send("sun_x", conf.world.w / 4 * math.cos(state.t/3600/24 * 2 * math.pi + conf.t.sunPhase.value * math.pi) + conf.world.w / 2 + state.view_offset)
+		backgroundShader:send("sun_y", conf.world.h * math.sin(state.t/3600/24 * 2 * math.pi + conf.t.sunPhase.value * math.pi) + conf.world.horizon)
 		backgroundShader:send("sun_r", 50)
 		-- expose time configuration menu
 		if menuState == "time" then
@@ -306,7 +319,7 @@ function love.update(dt)
 		love.graphics.setCanvas(canvas)
 		love.graphics.clear()
 		love.graphics.setShader(backgroundShader)
-		love.graphics.rectangle('fill', 0, 0, 1920*4, 1080)
+		love.graphics.rectangle('fill', 0, 0, conf.world.w, conf.world.h)
 		love.graphics.setShader(dayNightShader)
 		love.graphics.draw(landscape)
 		love.graphics.setShader()
@@ -324,8 +337,8 @@ function love.draw()
 		-- draw foreground
 		love.graphics.setShader(dayNightShader)
 		for index,value in ipairs(layers) do
-			love.graphics.draw(grassBatches[index], view, 0, 0, 1, 1, 5, 20) -- grass
-			love.graphics.draw(flowerBatches[index], view, 0, 0, 1, 1, 0, 0)--1+0.008*index) -- flowers
+			love.graphics.draw(grassBatches[index], state.view_offset, 0, 0, 1, 1, 5, 20) -- grass
+			love.graphics.draw(flowerBatches[index], state.view_offset, 0, 0, 1, 1, 0, 0)--1+0.008*index) -- flowers
 		end
 		love.graphics.setShader()
 		-- draw items in hand
@@ -362,7 +375,7 @@ function love.mousepressed(x, y, button, istouch)
 		-- center standard sized sprite
 		spriteOffsetX = hand["x"]/2
 		spriteOffsetY = hand["y"]
-		mouse.x = (mouse.x - spriteOffsetX - view) % (4 * 1920)
+		mouse.x = (mouse.x - spriteOffsetX - state.view_offset) % conf.world.w
 		mouse.y = mouse.y - spriteOffsetY
 		for index,value in ipairs(layers) do
 			scaleFactor = 0.004*value
@@ -408,6 +421,6 @@ function love.wheelmoved(x, y)
 	-- process input for GUI
 	-- process input dependent on current state
 	if currentState == "game" then
-		view = view + y * 100
+		state.view_offset = state.view_offset + y * 100
 	end
 end
