@@ -211,7 +211,7 @@ function setSlider(var)
 end
 
 function love.update(dt)
-	-- update content dependent on current state
+	-- update screen content dependent on current state
 	if currentState == "menu" then
 		if suit.Button("Start Game", 100, 100, 300, 30).hit then
 			currentState = "game"
@@ -220,37 +220,10 @@ function love.update(dt)
 			love.event.quit(0)
 		end
 	elseif currentState == "game" then
-		suit.layout:reset(16, 16)
-		suit.layout:padding(2, 2)
-		-- check GUI input
-		if suit.ImageButton(nil, menuIcons["time"], suit.layout:col(32, 32)).hit then
-			menuState = toggleState(menuState, "time")
-		end
-		if suit.ImageButton(nil, menuIcons["weather"], suit.layout:col()).hit then
-			menuState = toggleState(menuState, "weather")
-		end
-		if suit.ImageButton(nil, menuIcons["stationaryBeings"], suit.layout:col()).hit then
-			menuState = toggleState(menuState, "stationaryBeings")
-		end
-		if suit.ImageButton(nil, menuIcons["menu"], suit.layout:col()).hit then
-			currentState = "menu"
-		end
-		if suit.ImageButton(nil, menuIcons["quit"], suit.layout:col()).hit then
-			love.event.quit(0)
-		end
-		-- stationary beings menu (includes plants)
-		if menuState == "stationaryBeings" then
-			suit.layout:reset(love.graphics.getWidth()/2 - 200, love.graphics.getHeight()/2 - 400)
-			suit.layout:padding(10,10)
-			for entry = 1, #stationaryBeingsList do
-				if suit.ImageButton(nil, stationaryBeingsMenuIcons[entry], suit.layout:col(64,64)).hit and stationaryBeingsList[entry]["count"] > 0 then
-					hand = stationaryBeingsList[entry]["hand"]
-					stationaryBeingsList[entry]["count"] = stationaryBeingsList[entry]["count"] - 1
-					menuState = nil
-				end
-				suit.Label(stationaryBeingsList[entry]["count"], suit.layout:col())
-			end
-		end
+		----------------
+		-- GAME LOGIC --
+		----------------
+
 		-- do time calculation
 		state.t = state.t + dt * 2^conf.t.speed.value * conf.t.flowDir.value
 		local hour = state.t / 3600 % 24
@@ -260,10 +233,10 @@ function love.update(dt)
 		local year = state.t / (3600 * 24 * 365)
 		if hour > conf.t.dawn.value and hour <= conf.t.sunrise.value then
 			state.sunIntensity = (1 - ((conf.t.sunrise.value - hour) / (conf.t.sunrise.value - conf.t.dawn.value)))^2 * 0.8 + 0.2
-			love.audio.play(morningBirds)
-			love.audio.pause(nightBirds)
-			-- update beings state
 			if dawnUpdate then
+				love.audio.play(morningBirds)
+				love.audio.pause(nightBirds)
+				-- update beings state
 				for species, beings in pairs(stationaryBeings) do
 					for name, individual in pairs(beings) do
 						individual["thirsty"] = individual["thirsty"] + 1
@@ -310,12 +283,64 @@ function love.update(dt)
 			love.audio.play(nightBirds)
 			duskUpdate = true
 		end
+
+		-- do weather calculation
+		rainSystem:setParticleLifetime(conf.rain.minLife.value, conf.rain.maxLife.value)
+		rainSystem:setEmissionRate(conf.rain.rate.value)
+		rainSystem:setSpeed(conf.rain.minSpeed.value, conf.rain.maxSpeed.value)
+		rainSystem:setDirection(math.pi * conf.rain.direction.value)
+		if conf.rain.enabled.checked then
+			rainSystem:start()
+		else
+			rainSystem:stop()
+		end
+		rainSystem:update(dt)
+
+		---------------
+		-- RENDERING --
+		---------------
+
+		-- update shaders
 		dayNightShader:send("intensity", state.sunIntensity)
 		wrapShader:send("x_offset", state.view_offset / conf.world.w)
 		backgroundShader:send("intensity", state.sunIntensity)
 		backgroundShader:send("sun_x", conf.world.w / 4 * math.cos(state.t/3600/24 * 2 * math.pi + conf.t.sunPhase.value * math.pi) + conf.world.w / 2 + state.view_offset)
 		backgroundShader:send("sun_y", conf.world.h * math.sin(state.t/3600/24 * 2 * math.pi + conf.t.sunPhase.value * math.pi) + conf.world.horizon)
 		backgroundShader:send("sun_r", 50)
+
+		-- render background and landscape to canvas
+		love.graphics.setCanvas(canvas)
+		love.graphics.clear()
+		love.graphics.setShader(backgroundShader)
+		love.graphics.rectangle('fill', 0, 0, conf.world.w, conf.world.h)
+		love.graphics.setShader(dayNightShader)
+		love.graphics.draw(landscape)
+		love.graphics.setShader()
+		love.graphics.setCanvas()
+
+		----------
+		-- GUI  --
+		----------
+
+		-- expose main image based menu
+		suit.layout:reset(16, 16)
+		suit.layout:padding(2, 2)
+		if suit.ImageButton(nil, menuIcons["time"], suit.layout:col(32, 32)).hit then
+			menuState = toggleState(menuState, "time")
+		end
+		if suit.ImageButton(nil, menuIcons["weather"], suit.layout:col()).hit then
+			menuState = toggleState(menuState, "weather")
+		end
+		if suit.ImageButton(nil, menuIcons["stationaryBeings"], suit.layout:col()).hit then
+			menuState = toggleState(menuState, "stationaryBeings")
+		end
+		if suit.ImageButton(nil, menuIcons["menu"], suit.layout:col()).hit then
+			currentState = "menu"
+		end
+		if suit.ImageButton(nil, menuIcons["quit"], suit.layout:col()).hit then
+			love.event.quit(0)
+		end
+
 		-- expose time configuration menu
 		if menuState == "time" then
 			-- reset layout
@@ -339,20 +364,6 @@ function love.update(dt)
 			suit.Label("Current time: "..formatTime(second, minute, hour).." (day "..tostring(math.floor(day))..", year "..tostring(math.floor(year))..")", {align="left"}, suit.layout:row())
 		end
 
-		-- do weather
-		
-		rainSystem:setParticleLifetime(conf.rain.minLife.value, conf.rain.maxLife.value)
-		rainSystem:setEmissionRate(conf.rain.rate.value)
-		rainSystem:setSpeed(conf.rain.minSpeed.value, conf.rain.maxSpeed.value)
-		rainSystem:setDirection(math.pi * conf.rain.direction.value)
-		if conf.rain.enabled.checked then
-			rainSystem:start()
-		else
-			rainSystem:stop()
-		end
-		-- update drop positions
-		rainSystem:update(dt)
-
 		-- expose weather configuration menu
 		if menuState == "weather" then
 			-- reset layout
@@ -373,15 +384,19 @@ function love.update(dt)
 			suit.Label("Emitted rain drops: "..tostring(rainSystem:getCount()), {align="left"}, suit.layout:row())
 		end
 
-		-- render background and landscape to canvas
-		love.graphics.setCanvas(canvas)
-		love.graphics.clear()
-		love.graphics.setShader(backgroundShader)
-		love.graphics.rectangle('fill', 0, 0, conf.world.w, conf.world.h)
-		love.graphics.setShader(dayNightShader)
-		love.graphics.draw(landscape)
-		love.graphics.setShader()
-		love.graphics.setCanvas()
+		-- expose stationary beings menu (includes plants)
+		if menuState == "stationaryBeings" then
+			suit.layout:reset(love.graphics.getWidth()/2 - 200, love.graphics.getHeight()/2 - 400)
+			suit.layout:padding(10,10)
+			for entry = 1, #stationaryBeingsList do
+				if suit.ImageButton(nil, stationaryBeingsMenuIcons[entry], suit.layout:col(64,64)).hit and stationaryBeingsList[entry]["count"] > 0 then
+					hand = stationaryBeingsList[entry]["hand"]
+					stationaryBeingsList[entry]["count"] = stationaryBeingsList[entry]["count"] - 1
+					menuState = nil
+				end
+				suit.Label(stationaryBeingsList[entry]["count"], suit.layout:col())
+			end
+		end
 	end
 end
 
