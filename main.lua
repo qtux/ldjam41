@@ -197,17 +197,22 @@ function love.update(dt)
 			love.event.quit(0)
 		end
 	elseif currentState == "game" then
+		suit.layout:reset(16, 16)
+		suit.layout:padding(2, 2)
 		-- check GUI input
-		if suit.ImageButton(nil, menuIcons["time"], 16, 16).hit then
+		if suit.ImageButton(nil, menuIcons["time"], suit.layout:col(32, 32)).hit then
 			menuState = toggleState(menuState, "time")
 		end
-		if suit.ImageButton(nil, menuIcons["stationaryBeings"], 18+32*1, 16).hit then
+		if suit.ImageButton(nil, menuIcons["weather"], suit.layout:col()).hit then
+			menuState = toggleState(menuState, "weather")
+		end
+		if suit.ImageButton(nil, menuIcons["stationaryBeings"], suit.layout:col()).hit then
 			menuState = toggleState(menuState, "stationaryBeings")
 		end
-		if suit.ImageButton(nil, menuIcons["menu"], 20+32*2, 16).hit then
+		if suit.ImageButton(nil, menuIcons["menu"], suit.layout:col()).hit then
 			currentState = "menu"
 		end
-		if suit.ImageButton(nil, menuIcons["quit"], 22+32*3, 16).hit then
+		if suit.ImageButton(nil, menuIcons["quit"], suit.layout:col()).hit then
 			love.event.quit(0)
 		end
 		-- stationary beings menu (includes plants)
