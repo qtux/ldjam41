@@ -29,6 +29,15 @@ local conf = {
 		flowDir =	{value = 1, min = -1, max = 1, str = "Time flow direction", unit = ""},
 	},
 	-- weather settings
+	weather = {
+		minLife =	{value = 1, min = 0, max = 5, str = "Minimum drop life", unit = "s"},
+		maxLife =	{value = 3, min = 0, max = 5, str = "Maximum drop life", unit = "s"},
+		rate =		{value = 2000, min = 0, max = 10000, str = "Emission rate", unit = "Hz"},
+		minSpeed =	{value = 600, min = 0, max = 5000, str = "Minimum drop speed", unit = "px/s"},
+		maxSpeed =	{value = 1000, min = 0, max = 5000, str = "Maximum drop speed", unit = "px/s"},
+		direction =	{value = 0.5, min = 0, max = 2, str = "Rain direction", unit = "times pi"},
+		raining =	{checked = false, text = "let it rain"},
+	},
 	-- world settings
 	world = {
 		horizon = 175,
@@ -157,6 +166,12 @@ function love.load()
 	nightBirds:setLooping(true)
 	morningBirds = love.audio.newSource("assets/sounds/morningBirds.ogg", "stream")
 	morningBirds:setLooping(true)
+
+	-- rain particle system
+	local rainDrop = love.graphics.newImage('assets/rain_drop.png')
+	rainSystem = love.graphics.newParticleSystem(rainDrop, 100000)
+	rainSystem:setColors(255, 255, 255, 255, 255, 255, 255, 0)
+	rainSystem:setEmissionArea("uniform", love.graphics.getWidth() * 0.5, love.graphics.getHeight(), 0, false)
 end
 
 local checkBeing = {
@@ -321,6 +336,38 @@ function love.update(dt)
 			end
 			suit.Label("Current time: "..formatTime(second, minute, hour).." (day "..tostring(math.floor(day))..", year "..tostring(math.floor(year))..")", {align="left"}, suit.layout:row())
 		end
+
+		-- do weather
+		rainSystem:setParticleLifetime(conf.weather.minLife.value, conf.weather.maxLife.value)
+		rainSystem:setEmissionRate(conf.weather.rate.value)
+		rainSystem:setSpeed(conf.weather.minSpeed.value, conf.weather.maxSpeed.value)
+		rainSystem:setDirection(math.pi * conf.weather.direction.value)
+		if conf.weather.raining.checked then
+			rainSystem:start()
+		else
+			rainSystem:stop()
+		end
+		-- update drop positions
+		rainSystem:update(dt)
+
+		-- expose weather configuration menu
+		if menuState == "weather" then
+			-- reset layout
+			suit.layout:reset(100, 100)
+			suit.layout:padding(4, 4)
+			-- draw sliders for weather values
+			setSlider(conf.weather.minLife)
+			setSlider(conf.weather.maxLife)
+			setSlider(conf.weather.rate)
+			setSlider(conf.weather.minSpeed)
+			setSlider(conf.weather.maxSpeed)
+			setSlider(conf.weather.direction)
+			-- show checkobx to let it rain
+			suit.Checkbox(conf.weather.raining, {align='right'}, suit.layout:row())
+			-- show number of emitted rain drops
+			suit.Label("Emitted rain drops: "..tostring(rainSystem:getCount()), {align="left"}, suit.layout:row())
+		end
+
 		-- render background and landscape to canvas
 		love.graphics.setCanvas(canvas)
 		love.graphics.clear()
@@ -346,6 +393,8 @@ function love.draw()
 			love.graphics.draw(grassBatches[index], state.view_offset, 0, 0, 1, 1, 5, 20) -- grass
 			love.graphics.draw(flowerBatches[index], state.view_offset, 0, 0, 1, 1, 0, 0)--1+0.008*index) -- flowers
 		end
+		-- draw rain particle system
+		love.graphics.draw(rainSystem, love.graphics.getWidth() * 0.5, love.graphics.getHeight() * 0.5)
 		love.graphics.setShader()
 		-- draw items in hand
 		if (hand ~= nil) then
