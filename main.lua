@@ -26,19 +26,18 @@ local conf = {
 		sunset =	{value = 18, min = 0, max = 24, str = "Sunset", unit = "h"},
 		dusk =		{value = 19, min = 0, max = 24, str = "Dusk", unit = "h"},
 		midnight =	{value = 24, min = 0, max = 24, str = "Midnight", unit = "h"},
-		speed =		{value = 10, min = 0, max = 32, str = "Time speedup exponent", unit = ""},
-		flowDir =	{value = 1, min = -1, max = 1, str = "Time flow direction", unit = ""},
+		speed =		{value = 10, min = 0, max = 20, str = "Time speedup exponent", unit = ""},
 	},
 	-- rain settings
 	rain = {
-		minLife =	{value = 1, min = 0, max = 5, str = "Minimum drop life", unit = "s"},
-		maxLife =	{value = 3, min = 0, max = 5, str = "Maximum drop life", unit = "s"},
-		rate =		{value = 2000, min = 0, max = 10000, str = "Emission rate", unit = "Hz"},
-		minSpeed =	{value = 600, min = 0, max = 5000, str = "Minimum drop speed", unit = "px/s"},
-		maxSpeed =	{value = 1000, min = 0, max = 5000, str = "Maximum drop speed", unit = "px/s"},
+		minLife =	{value = 1 * 1024, min = 0, max = 5 * 1024, str = "Minimum drop life", unit = "s"},
+		maxLife =	{value = 3 * 1024, min = 0, max = 5 * 1024, str = "Maximum drop life", unit = "s"},
+		rate =		{value = 2000 / 1024, min = 0, max = 10000 / 1024, str = "Emission rate", unit = "Hz"},
+		minSpeed =	{value = 600 / 1024, min = 0, max = 5000 / 1024, str = "Minimum drop speed", unit = "px/s"},
+		maxSpeed =	{value = 1000/ 1024, min = 0, max = 5000 / 1024, str = "Maximum drop speed", unit = "px/s"},
 		direction =	{value = 0.5, min = 0, max = 2, str = "Rain direction", unit = "times pi"},
 		enabled =	{checked = false, text = "let it rain"},
-		chance =	{value = 0, min = 0, max = 100, str = "Rain probability per day", unit = "%"},
+		chance =	{value = 0.1, min = 0, max = 1, str = "Rain probability per day", unit = ""},
 		duration =	{value = 24 * 3600, min = 0, max = 24 * 3600, str = "Maximum rain duration", unit = "s"},
 	},
 	-- world settings
@@ -191,7 +190,7 @@ function love.load()
 
 	-- rain particle system
 	local rainDrop = love.graphics.newImage('assets/rain_drop.png')
-	rainSystem = love.graphics.newParticleSystem(rainDrop, 100000)
+	rainSystem = love.graphics.newParticleSystem(rainDrop, 10000)
 	rainSystem:setColors(255, 255, 255, 255, 255, 255, 255, 0)
 	rainSystem:setEmissionArea("uniform", love.graphics.getWidth() * 0.5, love.graphics.getHeight(), 0, false)
 end
@@ -214,8 +213,8 @@ local checkMovingBeing = {
 	bee = {
 		animationSteps = 2,
 		maxHungryDays = 10,
-		maxSpeed = 64,
-		maxAcceleration = 16
+		maxSpeed = 64 / 1024,
+		maxAcceleration = 16 / 1024
 	}
 }
 
@@ -239,6 +238,8 @@ function setSlider(var)
 end
 
 function love.update(dt)
+	local dt = dt * 2^conf.t.speed.value
+	state.t = state.t + dt
 	-- update screen content dependent on current state
 	if currentState == "menu" then
 		if suit.Button("Start Game", 100, 100, 300, 30).hit then
@@ -254,7 +255,6 @@ function love.update(dt)
 		----------------
 
 		-- do time calculation
-		state.t = state.t + dt * 2^conf.t.speed.value * conf.t.flowDir.value
 		local hour = state.t / 3600 % 24
 		local minute = state.t / 60 % 60
 		local second = state.t % 60
@@ -355,7 +355,7 @@ function love.update(dt)
 			if nextUpdate == "postmidnight" then
 				print(nextUpdate)
 				love.audio.play(nightBirds)
-				state.rain.enabled = math.random() < (conf.rain.chance.value / 100)
+				state.rain.enabled = math.random() < conf.rain.chance.value
 				state.rain.start = state.t + math.random() * 24 * 3600
 				state.rain.duration = math.random() * conf.rain.duration.value
 				print(state.rain.enabled)
@@ -494,7 +494,6 @@ function love.update(dt)
 			suit.layout:reset(100, 100)
 			suit.layout:padding(4, 4)
 			-- draw sliders for time values
-			setSlider(conf.t.flowDir)
 			setSlider(conf.t.speed)
 			setSlider(conf.t.dawn)
 			setSlider(conf.t.sunrise)
