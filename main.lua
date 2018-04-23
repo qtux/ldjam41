@@ -103,18 +103,18 @@ function love.load()
 
 	-- stationary beings initialization
 	stationaryBeingsList = {
-		{count=3, hand={x=16, y=32, quad=love.graphics.newQuad(0,0,16,32,flowerSprite:getDimensions()), name="redFlower"}},
-		{count=1, hand={x=10*16, y=10*16, quad=love.graphics.newQuad(0,4*16,10*16,10*16,flowerSprite:getDimensions()), name="tree"}}
+		redFlower = {id=0, count=3, hand={x=16, y=32, quad=love.graphics.newQuad(0,0,16,32,flowerSprite:getDimensions()), name="redFlower"}},
+		tree = {id=1, count=1, hand={x=10*16, y=10*16, quad=love.graphics.newQuad(0,4*16,10*16,10*16,flowerSprite:getDimensions()), name="tree"}}
 	}
 	-- load stationary beings menu icons
 	stationaryBeingsMenuIcons = {}
 	local stationaryMenuIconsSheet = love.image.newImageData("assets/stationaryMenuIcons.png")
-	for i = 1, #stationaryBeingsList do
-		stationaryBeingsMenuIcons[i] = {normal=0, hovered=1, active=2}
-		for sub_key, row in pairs(stationaryBeingsMenuIcons[i]) do
+	for species, content in pairs(stationaryBeingsList) do
+		stationaryBeingsMenuIcons[species] = {normal=0, hovered=1, active=2}
+		for sub_key, row in pairs(stationaryBeingsMenuIcons[species]) do
 			local iconImgData = love.image.newImageData(64, 64)
-			iconImgData:paste(stationaryMenuIconsSheet, 0, 0, 64 * (i-1), 64 * row, 64, 64)
-			stationaryBeingsMenuIcons[i][sub_key] = love.graphics.newImage(iconImgData)
+			iconImgData:paste(stationaryMenuIconsSheet, 0, 0, 64 * content["id"], 64 * row, 64, 64)
+			stationaryBeingsMenuIcons[species][sub_key] = love.graphics.newImage(iconImgData)
 		end
 	end
 	-- moving beings initialization
@@ -288,8 +288,13 @@ function love.update(dt)
 								flowerBatches[individual["layer"]]:set(individual["batchID"], quad, individual["posX"], individual["posY"], 0, individual["scaleX"], individual["scaleY"])
 							end
 							-- die of age
-							if individual["age"] > checkBeing[individual["species"]]["maxAge"]*checkBeing[individual["species"]]["growSpeed"] then
+							if individual["state"] ~= "dead" and individual["age"] >= checkBeing[individual["species"]]["maxAge"]*checkBeing[individual["species"]]["growSpeed"] then
+								print(individual["pollinated"])
+								print(individual["age"])
 								individual["state"] = "dead"
+								if individual["pollinated"] then
+									stationaryBeingsList[individual["species"]]["count"] = stationaryBeingsList[individual["species"]]["count"] + 3
+								end
 								flowerBatches[individual["layer"]]:set(individual["batchID"], 0, 0, 0, 0, 0)
 							end
 						end
@@ -374,7 +379,7 @@ function love.update(dt)
 				for species, beings in pairs(stationaryBeings) do
 					for name, individual in pairs(beings) do
 						local checkIndividual = checkBeing[individual["species"]]
-						if individual["pollinated"] == false and individual["age"] >= checkIndividual["mature"]*checkIndividual["growSpeed"] and individual["age"] <= (checkIndividual["mature"]+1)*checkIndividual["growSpeed"] then
+						if individual["pollinated"] == false and individual["age"] >= checkIndividual["mature"]*checkIndividual["growSpeed"] and individual["age"] < (checkIndividual["mature"]+1)*checkIndividual["growSpeed"] then
 							beedividual["target"] = {
 								posX = individual["posX"] + (individual["sizeX"]/2) * individual["scaleX"],
 								posY = individual["posY"] + (individual["sizeY"]/3) * individual["scaleY"],
@@ -510,13 +515,13 @@ function love.update(dt)
 		if menuState == "stationaryBeings" then
 			suit.layout:reset(love.graphics.getWidth()/2 - 200, love.graphics.getHeight()/2 - 400)
 			suit.layout:padding(10,10)
-			for entry = 1, #stationaryBeingsList do
-				if suit.ImageButton(nil, stationaryBeingsMenuIcons[entry], suit.layout:col(64,64)).hit and stationaryBeingsList[entry]["count"] > 0 then
-					hand = stationaryBeingsList[entry]["hand"]
-					stationaryBeingsList[entry]["count"] = stationaryBeingsList[entry]["count"] - 1
+			for species, content in pairs(stationaryBeingsList) do
+				if suit.ImageButton(nil, stationaryBeingsMenuIcons[species], suit.layout:col(64,64)).hit and content["count"] > 0 then
+					hand = content["hand"]
+					content["count"] = content["count"] - 1
 					menuState = nil
 				end
-				suit.Label(stationaryBeingsList[entry]["count"], suit.layout:col())
+				suit.Label(content["count"], suit.layout:col())
 			end
 		end
 
