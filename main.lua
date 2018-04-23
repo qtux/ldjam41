@@ -25,6 +25,8 @@ function love.load()
 		redFlower = {},
 		tree = {}
 	}
+	dawnUpdate = true
+	duskUpdate = true
 
 	-- set window properties
 	love.window.setTitle("Flower Defence")
@@ -219,28 +221,39 @@ function love.update(dt)
 			intensity = (1 - ((conf.t.sunrise.value - hour) / (conf.t.sunrise.value - conf.t.dawn.value)))^2 * 0.8 + 0.2
 			love.audio.play(morningBirds)
 			love.audio.pause(nightBirds)
-			for being in stationaryBeings do
-				for individual in being do
-					individual["thirsty"] = individual["thirsty"] + 1
-					individual["sleeping"] = false
-					individual["age"] = individual["age"] + 1
+			-- update beings state
+			if dawnUpdate then
+				for species, beings in pairs(stationaryBeings) do
+					for name, individual in pairs(beings) do
+						individual["thirsty"] = individual["thirsty"] + 1
+						individual["sleeping"] = false
+						individual["age"] = individual["age"] + 1
+						print(individual["species"], individual["age"])
+					end
 				end
+				dawnUpdate = false
 			end
 		elseif hour > conf.t.sunrise.value and hour <= conf.t.sunset.value then
 			intensity = 1
 			love.audio.play(afternoonBirds)
 			love.audio.pause(morningBirds)
+			dawnUpdate = true
 		elseif hour > conf.t.sunset.value and hour <= conf.t.dusk.value then
 			intensity = ((conf.t.dusk.value - hour) / (conf.t.dusk.value - conf.t.sunset.value))^2 * 0.8 + 0.2
 			love.audio.pause()
-			for being in stationaryBeings do
-				for individual in being do
-					individual["sleeping"] = true
+			-- update beings state
+			if duskUpdate then
+				for species, beings in pairs(stationaryBeings) do
+					for name, individual in pairs(beings) do
+						individual["sleeping"] = true
+					end
 				end
+				duskUpdate = false
 			end
 		else
 			intensity = 0.2
 			love.audio.play(nightBirds)
+			duskUpdate = true
 		end
 		dayNightShader:send("intensity", intensity)
 		wrapShader:send("x_offset", view/(1920 * 4))
@@ -347,7 +360,7 @@ function love.mousepressed(x, y, button, istouch)
 				py = value-(spriteOffsetY*scaleFactor)
 				sx = 1+scaleFactor
 				sy = 1+scaleFactor
-				newBeing = {
+				table.insert(stationaryBeings[hand["name"]], {
 					quadX = qx,
 					quadY = qy,
 					sizeX = sx,
@@ -362,9 +375,8 @@ function love.mousepressed(x, y, button, istouch)
 					sleeping = false,
 					pollinated = false,
 					age = 0,
-					being = hand["name"]
-				}
-				table.insert(stationaryBeings[hand["name"]], newBeing)
+					species = hand["name"]
+				})
 				break
 			end
 		end
