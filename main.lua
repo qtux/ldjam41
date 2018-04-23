@@ -28,15 +28,17 @@ local conf = {
 		speed =		{value = 10, min = 0, max = 32, str = "Time speedup exponent", unit = ""},
 		flowDir =	{value = 1, min = -1, max = 1, str = "Time flow direction", unit = ""},
 	},
-	-- weather settings
-	weather = {
+	-- rain settings
+	rain = {
 		minLife =	{value = 1, min = 0, max = 5, str = "Minimum drop life", unit = "s"},
 		maxLife =	{value = 3, min = 0, max = 5, str = "Maximum drop life", unit = "s"},
 		rate =		{value = 2000, min = 0, max = 10000, str = "Emission rate", unit = "Hz"},
 		minSpeed =	{value = 600, min = 0, max = 5000, str = "Minimum drop speed", unit = "px/s"},
 		maxSpeed =	{value = 1000, min = 0, max = 5000, str = "Maximum drop speed", unit = "px/s"},
 		direction =	{value = 0.5, min = 0, max = 2, str = "Rain direction", unit = "times pi"},
-		raining =	{checked = false, text = "let it rain"},
+		enabled =	{checked = false, text = "let it rain"},
+		chance =	{value = 0, min = 0, max = 100, str = "Rain probability per day", unit = "%"},
+		duration =	{value = 3600, min = 0, max = 10 * 3600, str = "Mean rain duration", unit = "s"},
 	},
 	-- world settings
 	world = {
@@ -338,11 +340,12 @@ function love.update(dt)
 		end
 
 		-- do weather
-		rainSystem:setParticleLifetime(conf.weather.minLife.value, conf.weather.maxLife.value)
-		rainSystem:setEmissionRate(conf.weather.rate.value)
-		rainSystem:setSpeed(conf.weather.minSpeed.value, conf.weather.maxSpeed.value)
-		rainSystem:setDirection(math.pi * conf.weather.direction.value)
-		if conf.weather.raining.checked then
+		
+		rainSystem:setParticleLifetime(conf.rain.minLife.value, conf.rain.maxLife.value)
+		rainSystem:setEmissionRate(conf.rain.rate.value)
+		rainSystem:setSpeed(conf.rain.minSpeed.value, conf.rain.maxSpeed.value)
+		rainSystem:setDirection(math.pi * conf.rain.direction.value)
+		if conf.rain.enabled.checked then
 			rainSystem:start()
 		else
 			rainSystem:stop()
@@ -356,14 +359,16 @@ function love.update(dt)
 			suit.layout:reset(100, 100)
 			suit.layout:padding(4, 4)
 			-- draw sliders for weather values
-			setSlider(conf.weather.minLife)
-			setSlider(conf.weather.maxLife)
-			setSlider(conf.weather.rate)
-			setSlider(conf.weather.minSpeed)
-			setSlider(conf.weather.maxSpeed)
-			setSlider(conf.weather.direction)
+			setSlider(conf.rain.minLife)
+			setSlider(conf.rain.maxLife)
+			setSlider(conf.rain.rate)
+			setSlider(conf.rain.minSpeed)
+			setSlider(conf.rain.maxSpeed)
+			setSlider(conf.rain.direction)
+			setSlider(conf.rain.chance)
+			setSlider(conf.rain.duration)
 			-- show checkobx to let it rain
-			suit.Checkbox(conf.weather.raining, {align='right'}, suit.layout:row())
+			suit.Checkbox(conf.rain.enabled, {align='right'}, suit.layout:row())
 			-- show number of emitted rain drops
 			suit.Label("Emitted rain drops: "..tostring(rainSystem:getCount()), {align="left"}, suit.layout:row())
 		end
