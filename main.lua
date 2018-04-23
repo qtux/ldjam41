@@ -25,6 +25,7 @@ local conf = {
 		sunrise =	{value = 6, min = 0, max = 24, str = "Sunrise", unit = "h"},
 		sunset =	{value = 18, min = 0, max = 24, str = "Sunset", unit = "h"},
 		dusk =		{value = 19, min = 0, max = 24, str = "Dusk", unit = "h"},
+		midnight =	{value = 24, min = 0, max = 24, str = "Midnight", unit = "h"},
 		speed =		{value = 10, min = 0, max = 32, str = "Time speedup exponent", unit = ""},
 		flowDir =	{value = 1, min = -1, max = 1, str = "Time flow direction", unit = ""},
 	},
@@ -329,13 +330,23 @@ function love.update(dt)
 			end
 
 			-- set next one-shot update time
-			nextUpdate = "night"
-		else
+			nextUpdate = "premidnight"
+		elseif hour > conf.t.dusk.value and hour <= conf.t.midnight.value then
 			-- continuous updates
 			state.sunIntensity = 0.2
 
 			-- one-shot updates
-			if nextUpdate == "night" then
+			if nextUpdate == "premidnight" then
+				print(nextUpdate)
+			end
+
+			-- set next one-shot update time
+			nextUpdate = "postmidnight"
+		else
+			-- continuous updates
+			state.sunIntensity = 0.2
+			-- one-shot updates
+			if nextUpdate == "postmidnight" then
 				print(nextUpdate)
 				love.audio.play(nightBirds)
 			end
@@ -463,6 +474,7 @@ function love.update(dt)
 			setSlider(conf.t.sunrise)
 			setSlider(conf.t.sunset)
 			setSlider(conf.t.dusk)
+			setSlider(conf.t.midnight)
 			setSlider(conf.t.sunPhase)
 			-- show additional time information
 			function formatTime(seconds, minutes, hours)
