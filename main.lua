@@ -21,6 +21,10 @@ function love.load()
 	currentState = "game"
 	menuState = nil
 	hand = nil
+	stationaryBeings = {
+		redFlower = {},
+		tree = {}
+	}
 
 	-- set window properties
 	love.window.setTitle("Flower Defence")
@@ -51,8 +55,8 @@ function love.load()
 
 	-- stationary beings initialization
 	stationaryBeingsList = {
-		{count=3, hand={x=16, y=32, quad=love.graphics.newQuad(96,0,16,32,flowerSprite:getDimensions())}}, -- red flower
-		{count=1, hand={x=10*16, y=10*16, quad=love.graphics.newQuad(0,4*16,10*16,10*16,flowerSprite:getDimensions())}} -- tree
+		{count=3, hand={x=16, y=32, quad=love.graphics.newQuad(96,0,16,32,flowerSprite:getDimensions()), name="redFlower"}},
+		{count=1, hand={x=10*16, y=10*16, quad=love.graphics.newQuad(0,4*16,10*16,10*16,flowerSprite:getDimensions()), name="tree"}}
 	}
 	-- load stationary beings menu icons
 	stationaryBeingsMenuIcons = {}
@@ -118,6 +122,21 @@ function love.load()
 	morningBirds = love.audio.newSource("assets/sounds/morningBirds.ogg", "stream")
 	morningBirds:setLooping(true)
 end
+
+local checkBeing = {
+	redFlower = {
+		maxThirstyDays = 6,
+		maxAge = 10,
+		growSpeed = 3,
+		mature = 6
+	},
+	tree = { -- trees shouldn't die right now
+		maxThirstyDays = -1,
+		maxAge = -1,
+		growSpeed = 1000,
+		mature = 0
+	}
+}
 
 local conf = {
 	-- time settings
@@ -194,6 +213,13 @@ function love.update(dt)
 			intensity = (1 - ((conf.t.sunrise.value - hour) / (conf.t.sunrise.value - conf.t.dawn.value)))^2 * 0.8 + 0.2
 			love.audio.play(morningBirds)
 			love.audio.pause(nightBirds)
+			for being in stationaryBeings do
+				for individual in being do
+					individual["thirsty"] = individual["thirsty"] + 1
+					individual["sleeping"] = false
+					individual["age"] = individual["age"] + 1
+				end
+			end
 		elseif hour > conf.t.sunrise.value and hour <= conf.t.sunset.value then
 			intensity = 1
 			love.audio.play(afternoonBirds)
@@ -201,6 +227,11 @@ function love.update(dt)
 		elseif hour > conf.t.sunset.value and hour <= conf.t.dusk.value then
 			intensity = ((conf.t.dusk.value - hour) / (conf.t.dusk.value - conf.t.sunset.value))^2 * 0.8 + 0.2
 			love.audio.pause()
+			for being in stationaryBeings do
+				for individual in being do
+					individual["sleeping"] = true
+				end
+			end
 		else
 			intensity = 0.2
 			love.audio.play(nightBirds)
@@ -270,10 +301,10 @@ function love.keypressed(key, scancode, isrepeat)
 		love.event.quit(0)
 	end
 	if (key == "f") and (currentState == "game") then
-		hand = {x=16, y=32, quad=love.graphics.newQuad(96,0,16,32,flowerSprite:getDimensions())}
+		hand = {x=16, y=32, quad=love.graphics.newQuad(96,0,16,32,flowerSprite:getDimensions()), name="redFlower"}
 	end
 	if (key == "t") and (currentState == "game") then
-		hand = {x=10*16, y=10*16, quad=love.graphics.newQuad(0,4*16,10*16,10*16,flowerSprite:getDimensions())}
+		hand = {x=10*16, y=10*16, quad=love.graphics.newQuad(0,4*16,10*16,10*16,flowerSprite:getDimensions()), name="tree"}
 	end
 end
 
@@ -290,7 +321,31 @@ function love.mousepressed(x, y, button, istouch)
 		for index,value in ipairs(layers) do
 			scaleFactor = 0.004*value
 			if value >= mouse.y then
-				flowerBatches[index]:add(hand["quad"], mouse.x-(spriteOffsetX*scaleFactor), value-(spriteOffsetY*scaleFactor), 0, 1+scaleFactor, 1+scaleFactor)
+				-- store being
+				-- flowerSprite is assumed
+				qx, qy, sx, sy = hand["quad"]:getViewport()
+				px = mouse.x-(spriteOffsetX*scaleFactor)
+				py = value-(spriteOffsetY*scaleFactor)
+				sx = 1+scaleFactor
+				sy = 1+scaleFactor
+				newBeing = {
+					quadX = qx,
+					quadY = qy,
+					sizeX = sx,
+					sizeY = sy,
+					posX = px,
+					posY = py,
+					scaleX = sx,
+					scaleY = sy,
+					batchID = flowerBatches[index]:add(hand["quad"], px, py, 0, sx, sy),
+					state = "happy",
+					thirsty = 0,
+					sleeping = false,
+					pollinated = false,
+					age = 0,
+					being = hand["name"]
+				}
+				table.insert(stationaryBeings[hand["name"]], newBeing)
 				break
 			end
 		end
