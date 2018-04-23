@@ -482,6 +482,20 @@ function love.update(dt)
 		love.graphics.rectangle('fill', 0, 0, conf.world.w, conf.world.h)
 		love.graphics.setShader(dayNightShader)
 		love.graphics.draw(landscape)
+		for index,value in ipairs(layers) do
+			for i = -1,1 do
+				love.graphics.draw(grassBatches[index], conf.world.w * i, 0, 0, 1, 1, 5, 20) -- grass
+				love.graphics.draw(flowerBatches[index], conf.world.w * i, 0, 0, 1, 1, 0, 0)--1+0.008*index) -- flowers
+				for species, beings in pairs(movingBeings) do
+					for name, individual in pairs(beings) do
+						if individual["layer"] == index then
+							local quad = love.graphics.newQuad(individual["quadX"],individual["quadY"],individual["sizeX"],individual["sizeY"],movingBeingsSprite:getDimensions())
+							love.graphics.draw(movingBeingsSprite, quad, individual["posX"] + conf.world.w * i, individual["posY"])--, 0, individual["scale"], individual["scale"]) TODO
+						end
+					end
+				end
+			end
+		end
 		love.graphics.setShader()
 		love.graphics.setCanvas()
 
@@ -622,21 +636,8 @@ function love.draw()
 		love.graphics.setShader(wrapShader)
 		love.graphics.draw(canvas)
 		love.graphics.setShader()
-		-- draw foreground
-		love.graphics.setShader(dayNightShader)
-		for index,value in ipairs(layers) do
-			love.graphics.draw(grassBatches[index], state.view_offset, 0, 0, 1, 1, 5, 20) -- grass
-			love.graphics.draw(flowerBatches[index], state.view_offset, 0, 0, 1, 1, 0, 0)--1+0.008*index) -- flowers
-			for species, beings in pairs(movingBeings) do
-				for name, individual in pairs(beings) do
-					if individual["layer"] == index then
-						local quad = love.graphics.newQuad(individual["quadX"],individual["quadY"],individual["sizeX"],individual["sizeY"],movingBeingsSprite:getDimensions())
-						love.graphics.draw(movingBeingsSprite, quad, individual["posX"]+state.view_offset, individual["posY"])--, 0, individual["scale"], individual["scale"]) TODO
-					end
-				end
-			end
-		end
 		-- draw rain particle system
+		love.graphics.setShader(dayNightShader)
 		love.graphics.draw(rainSystem, love.graphics.getWidth() * 0.5, love.graphics.getHeight() * 0.5)
 		love.graphics.setShader()
 		-- draw items in hand
