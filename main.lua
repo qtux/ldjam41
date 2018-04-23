@@ -60,7 +60,7 @@ local state = {
 	nextUpdate = "dusk",	-- next state update time
 	sunIntensity = 1,		-- current sun intensity (should be between 0.2 and 1)
 	view_offset = 0,		-- camera x offset
-	rain = {enabled, raining, start, stop, duration},
+	rain = {enabled = false, raining = false, start = 0, stop = 0, duration = 0},
 }
 
 function love.load()
@@ -383,7 +383,9 @@ function love.update(dt)
 			state.rain.raining = false
 		end
 		-- force rain
-		if state.rain.raining or conf.rain.enabled.checked then
+		state.rain.raining = state.rain.raining or conf.rain.enabled.checked
+		-- let it rain
+		if state.rain.raining then
 			rainSystem:start()
 		else
 			rainSystem:stop()
