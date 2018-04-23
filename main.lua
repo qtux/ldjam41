@@ -68,6 +68,9 @@ function love.load()
 		redFlower = {},
 		tree = {}
 	}
+	movingBeings = {
+		bee = {}
+	}
 	dawnUpdate = true
 	duskUpdate = true
 
@@ -84,9 +87,10 @@ function love.load()
 	landscapeData = love.image.newImageData("assets/landscapeSketch.png")
 	grassSprite = love.graphics.newImage("assets/grass.png")
 	flowerSprite = love.graphics.newImage("assets/flower.png")
+	movingBeingsSprite = love.graphics.newImage("assets/movingbeings.png")
 
 	-- load menu icons which are listed in the initial menuIcons table at the corresponding position
-	menuIcons = {time=0, weather=1, stationaryBeings=2, menu=5, quit=6}
+	menuIcons = {time=0, weather=1, stationaryBeings=2, movingBeings=3, menu=5, quit=6}
 	local menuIconsSheet = love.image.newImageData("assets/menuIcons.png")
 	for main_key, col in pairs(menuIcons) do
 		menuIcons[main_key] = {normal=0, hovered=1, active=2}
@@ -111,6 +115,21 @@ function love.load()
 			local iconImgData = love.image.newImageData(64, 64)
 			iconImgData:paste(stationaryMenuIconsSheet, 0, 0, 64 * (i-1), 64 * row, 64, 64)
 			stationaryBeingsMenuIcons[i][sub_key] = love.graphics.newImage(iconImgData)
+		end
+	end
+	-- moving beings initialization
+	movingBeingsList = {
+		{count=0, quad=love.graphics.newQuad(0,0,16,16,movingBeingsSprite:getDimensions()), species="bee"}
+	}
+	-- load moving beings menu icons
+	movingBeingsMenuIcons = {}
+	local movingMenuIconsSheet = love.image.newImageData("assets/movingMenuIcons.png")
+	for i = 1, #movingBeingsList do
+		movingBeingsMenuIcons[i] = {normal=0, hovered=1, active=2}
+		for sub_key, row in pairs(movingBeingsMenuIcons[i]) do
+			local iconImgData = love.image.newImageData(64, 64)
+			iconImgData:paste(movingMenuIconsSheet, 0, 0, 64 * (i-1), 64 * row, 64, 64)
+			movingBeingsMenuIcons[i][sub_key] = love.graphics.newImage(iconImgData)
 		end
 	end
 
@@ -190,6 +209,14 @@ local checkBeing = {
 		mature = 0
 	}
 }
+local checkMovingBeing = {
+	bee = {
+		animationSteps = 2,
+		maxHungryDays = 10,
+		maxSpeed = 64,
+		maxAcceleration = 16
+	}
+}
 
 function toggleState(old, new)
 	if old == new then
@@ -220,6 +247,7 @@ function love.update(dt)
 			love.event.quit(0)
 		end
 	elseif currentState == "game" then
+
 		----------------
 		-- GAME LOGIC --
 		----------------
@@ -236,6 +264,12 @@ function love.update(dt)
 			if dawnUpdate then
 				love.audio.play(morningBirds)
 				love.audio.pause(nightBirds)
+
+				-- check for new possibilities
+				if #movingBeings["bee"] < #stationaryBeings["tree"] then
+					movingBeingsList[1]["count"] = #stationaryBeings["tree"] - #movingBeings["bee"]
+				end
+
 				-- update beings state
 				for species, beings in pairs(stationaryBeings) do
 					for name, individual in pairs(beings) do
@@ -255,8 +289,8 @@ function love.update(dt)
 								flowerBatches[individual["layer"]]:set(individual["batchID"], 0, 0, 0, 0, 0)
 							end
 						end
-						print(individual["species"], individual["age"])
-						print(individual["species"], individual["state"])
+						--print(individual["species"], individual["age"])
+						--print(individual["species"], individual["state"])
 					end
 				end
 				dawnUpdate = false
@@ -296,6 +330,53 @@ function love.update(dt)
 		end
 		rainSystem:update(dt)
 
+		-- do animal behaviour update
+		-- bee
+		for beename, beedividual in pairs(movingBeings["bee"]) do
+			if beedividual["target"] == nil and not beedividual["sleeping"] then
+				for species, beings in pairs(stationaryBeings) do
+					for name, individual in pairs(beings) do
+						local checkIndividual = checkBeing[individual["species"]]
+						if individual["pollinated"] == false and individual["age"] >= checkIndividual["mature"]*checkIndividual["growSpeed"] and individual["age"] <= (checkIndividual["mature"]+1)*checkIndividual["growSpeed"] then
+							beedividual["target"] = {
+								posX = individual["posX"] + (individual["sizeX"]/2) * individual["scaleX"],
+								posY = individual["posY"] + (individual["sizeY"]/3) * individual["scaleY"],
+								being = individual
+							}
+						end
+					end
+				end
+			end
+			if beedividual["target"] == nil and not beedividual["sleeping"] then
+				beedividual["target"] = beedividual["home"]
+				beedividual["target"]["being"] = nil
+			end
+			if beedividual["target"] ~= nil and not beedividual["sleeping"] then
+				-- move
+				deltaX = beedividual["target"]["posX"] - beedividual["posX"]
+				deltaY = beedividual["target"]["posY"] - beedividual["posY"]
+				distance = math.sqrt(math.pow(deltaX,2) + math.pow(deltaY,2))
+				if distance < math.pow(beedividual["speed"], 2)/(2 * checkMovingBeing["bee"]["maxAcceleration"]) then
+					beedividual["speed"] = math.max(beedividual["speed"] - checkMovingBeing["bee"]["maxAcceleration"] * dt, 0)
+				else
+					beedividual["speed"] = math.min(beedividual["speed"] + checkMovingBeing["bee"]["maxAcceleration"] * dt, checkMovingBeing["bee"]["maxSpeed"])
+				end
+				angle = math.atan2(deltaY, deltaX)
+				beedividual["posX"] = beedividual["posX"] + beedividual["speed"] * math.cos(angle) * dt * math.random()
+				beedividual["posY"] = beedividual["posY"] + beedividual["speed"] * math.sin(angle) * dt * math.random()
+				--beedividual["posX"] = beedividual["posX"] + deltaX * (beedividual["speed"]/distance) * dt
+				--beedividual["posY"] = beedividual["posY"] + deltaY * (beedividual["speed"]/distance) * dt
+				-- check reached goal
+				if distance < beedividual["speed"] * dt then --beedividual["posX"] >= beedividual["target"]["posX"] - 2 and beedividual["posX"] <= beedividual["target"]["posX"] + 2 and beedividual["posY"] >= beedividual["target"]["posY"] - 2 and beedividual["posY"] <= beedividual["target"]["posY"] + 2 then
+					if beedividual["target"]["being"] then
+						beedividual["target"]["being"]["pollinated"] = true
+					end
+					beedividual["target"] = nil
+					beedividual["speed"] = 0
+				end
+			end
+		end
+
 		---------------
 		-- RENDERING --
 		---------------
@@ -333,6 +414,9 @@ function love.update(dt)
 		end
 		if suit.ImageButton(nil, menuIcons["stationaryBeings"], suit.layout:col()).hit then
 			menuState = toggleState(menuState, "stationaryBeings")
+		end
+		if suit.ImageButton(nil, menuIcons["movingBeings"], suit.layout:col()).hit then
+			menuState = toggleState(menuState, "movingBeings")
 		end
 		if suit.ImageButton(nil, menuIcons["menu"], suit.layout:col()).hit then
 			currentState = "menu"
@@ -397,6 +481,51 @@ function love.update(dt)
 				suit.Label(stationaryBeingsList[entry]["count"], suit.layout:col())
 			end
 		end
+
+		-- expose moving beings menu (includes animals)
+		if menuState == "movingBeings" then
+			suit.layout:reset(love.graphics.getWidth()/2 - 200, love.graphics.getHeight()/2 - 400)
+			suit.layout:padding(10,10)
+			for entry = 1, #movingBeingsList do
+				if suit.ImageButton(nil, movingBeingsMenuIcons[entry], suit.layout:col(64,64)).hit and movingBeingsList[entry]["count"] > 0 then
+					movingBeingsList[entry]["count"] = movingBeingsList[entry]["count"] - 1
+					qx, qy, sx, sy = movingBeingsList[entry]["quad"]:getViewport()
+					if movingBeingsList[entry]["species"] == "bee" then
+						hometree = stationaryBeings["tree"][#movingBeings["bee"]+1]
+						px = hometree["posX"] + (hometree["sizeX"]/2) * hometree["scaleX"]
+						py = hometree["posY"] + (hometree["sizeY"]/2) * hometree["scaleY"]
+					else
+						px = math.random(love.graphics.getWidth()/2 - 300, love.graphics.getWidth()/2 + 300)
+						py = layers[math.random(#layers)]
+					end
+					for index,value in ipairs(layers) do
+						if value >= py then
+							sc = 0.004*value
+							ly = index
+						end
+					end
+					table.insert(movingBeings[movingBeingsList[entry]["species"]], {
+						quadX = qx,
+						quadY = qy,
+						sizeX = sx,
+						sizeY = sy,
+						posX = px,
+						posY = py,
+						scale = sc,
+						layer = ly,
+						state = "happy",
+						home = {posX=px, posY=py},
+						target = nil,
+						speed = 0,
+						hungry = 0,
+						sleeping = false,
+						age = 0,
+						species = movingBeingsList[entry]["species"]
+					})
+				end
+				suit.Label(movingBeingsList[entry]["count"], suit.layout:col())
+			end
+		end
 	end
 end
 
@@ -412,6 +541,14 @@ function love.draw()
 		for index,value in ipairs(layers) do
 			love.graphics.draw(grassBatches[index], state.view_offset, 0, 0, 1, 1, 5, 20) -- grass
 			love.graphics.draw(flowerBatches[index], state.view_offset, 0, 0, 1, 1, 0, 0)--1+0.008*index) -- flowers
+			for species, beings in pairs(movingBeings) do
+				for name, individual in pairs(beings) do
+					if individual["layer"] == index then
+						local quad = love.graphics.newQuad(individual["quadX"],individual["quadY"],individual["sizeX"],individual["sizeY"],movingBeingsSprite:getDimensions())
+						love.graphics.draw(movingBeingsSprite, quad, individual["posX"]+state.view_offset, individual["posY"])--, 0, individual["scale"], individual["scale"]) TODO
+					end
+				end
+			end
 		end
 		-- draw rain particle system
 		love.graphics.draw(rainSystem, love.graphics.getWidth() * 0.5, love.graphics.getHeight() * 0.5)
