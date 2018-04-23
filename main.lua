@@ -39,7 +39,7 @@ local conf = {
 		direction =	{value = 0.5, min = 0, max = 2, str = "Rain direction", unit = "times pi"},
 		enabled =	{checked = false, text = "let it rain"},
 		chance =	{value = 0, min = 0, max = 100, str = "Rain probability per day", unit = "%"},
-		duration =	{value = 3600, min = 0, max = 10 * 3600, str = "Mean rain duration", unit = "s"},
+		duration =	{value = 24 * 3600, min = 0, max = 24 * 3600, str = "Maximum rain duration", unit = "s"},
 	},
 	-- world settings
 	world = {
@@ -60,6 +60,7 @@ local state = {
 	nextUpdate = "dusk",	-- next state update time
 	sunIntensity = 1,		-- current sun intensity (should be between 0.2 and 1)
 	view_offset = 0,		-- camera x offset
+	rain = {enabled, raining, start, stop, duration},
 }
 
 function love.load()
@@ -354,6 +355,12 @@ function love.update(dt)
 			if nextUpdate == "postmidnight" then
 				print(nextUpdate)
 				love.audio.play(nightBirds)
+				state.rain.enabled = math.random() < (conf.rain.chance.value / 100)
+				state.rain.start = state.t + math.random() * 24 * 3600
+				state.rain.duration = math.random() * conf.rain.duration.value
+				print(state.rain.enabled)
+				print(state.rain.start / 3600 % 24)
+				print(state.rain.duration)
 			end
 
 			-- set next one-shot update time
@@ -365,11 +372,23 @@ function love.update(dt)
 		rainSystem:setEmissionRate(conf.rain.rate.value)
 		rainSystem:setSpeed(conf.rain.minSpeed.value, conf.rain.maxSpeed.value)
 		rainSystem:setDirection(math.pi * conf.rain.direction.value)
-		if conf.rain.enabled.checked then
+		-- start rain
+		if not state.rain.raining and state.rain.enabled and state.t > state.rain.start then
+			state.rain.stop = state.rain.start + state.rain.duration
+			state.rain.raining = true
+			state.rain.enabled = false
+		end
+		-- stop rain
+		if state.rain.raining and state.t > state.rain.stop then
+			state.rain.raining = false
+		end
+		-- force rain
+		if state.rain.raining or conf.rain.enabled.checked then
 			rainSystem:start()
 		else
 			rainSystem:stop()
 		end
+		-- update rain droplets
 		rainSystem:update(dt)
 
 		-- do animal behaviour update
