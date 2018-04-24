@@ -160,7 +160,7 @@ function love.load()
 			grassBatch = love.graphics.newSpriteBatch(grassSprite, 1000)
 			flowerBatch = love.graphics.newSpriteBatch(flowerSprite, 100)
 			for x = 1, #grass[y], 8 do
-				grassBatch:add(grassQuad[math.random(#grassQuad)], grass[y][x], y, 0, 1, 1+0.008*y)
+				grassBatch:add(grassQuad[math.random(#grassQuad)], grass[y][x], y * (1 - 0.008 * 16), 0, 1, 1+0.008*y)
 			end
 			table.insert(grassBatches, grassBatch)
 			table.insert(flowerBatches, flowerBatch)
@@ -498,7 +498,7 @@ function love.update(dt)
 		love.graphics.draw(landscape)
 		for index,value in ipairs(layers) do
 			for i = -1,1 do
-				love.graphics.draw(grassBatches[index], conf.world.w * i, 0, 0, 1, 1, 5, 20) -- grass
+				love.graphics.draw(grassBatches[index], conf.world.w * i, 0, 0, 1, 1, 0, 0) -- grass
 				love.graphics.draw(flowerBatches[index], conf.world.w * i, 0, 0, 1, 1, 0, 0)--1+0.008*index) -- flowers
 				for species, beings in pairs(movingBeings) do
 					for name, individual in pairs(beings) do
