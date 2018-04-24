@@ -90,7 +90,7 @@ function love.load()
 	movingBeingsSprite = love.graphics.newImage("assets/movingbeings.png")
 
 	-- load menu icons which are listed in the initial menuIcons table at the corresponding position
-	menuIcons = {time=0, weather=1, stationaryBeings=2, movingBeings=3, menu=5, quit=6}
+	menuIcons = {time=0, weather=1, stationaryBeings=2, movingBeings=3, statusReport=4, menu=5, quit=6}
 	local menuIconsSheet = love.image.newImageData("assets/menuIcons.png")
 	for main_key, col in pairs(menuIcons) do
 		menuIcons[main_key] = {normal=0, hovered=1, active=2}
@@ -284,10 +284,8 @@ function love.update(dt)
 						if checkBeing[individual["species"]]["maxAge"] > 0 then
 							individual["age"] = individual["age"] + 1
 							-- grow
-							if individual["age"] % checkBeing[individual["species"]]["growSpeed"] == 0 then
-								local quad = love.graphics.newQuad((individual["age"]/checkBeing[individual["species"]]["growSpeed"])*individual["sizeX"]+individual["quadX"],individual["quadY"],individual["sizeX"],individual["sizeY"],flowerSprite:getDimensions())
-								flowerBatches[individual["layer"]]:set(individual["batchID"], quad, individual["posX"], individual["posY"], 0, individual["scaleX"], individual["scaleY"])
-							end
+							local quad = love.graphics.newQuad(math.floor(individual["age"]/checkBeing[individual["species"]]["growSpeed"])*individual["sizeX"]+individual["quadX"],individual["quadY"],individual["sizeX"],individual["sizeY"],flowerSprite:getDimensions())
+							flowerBatches[individual["layer"]]:set(individual["batchID"], quad, individual["posX"], individual["posY"], 0, individual["scaleX"], individual["scaleY"])
 							-- die of age
 							if individual["state"] ~= "dead" and individual["age"] >= checkBeing[individual["species"]]["maxAge"]*checkBeing[individual["species"]]["growSpeed"] then
 								individual["state"] = "dead"
@@ -300,7 +298,7 @@ function love.update(dt)
 						-- thirsty
 						if checkBeing[individual["species"]]["maxThirstyDays"] > 0 then
 							-- show thirst
-							if individual["thirsty"] > checkBeing[individual["species"]]["maxThirstyDays"]/2 then
+							if individual["state"] ~= "dead" and individual["thirsty"] > checkBeing[individual["species"]]["maxThirstyDays"]/2 then
 								individual["state"] = "thirsty"
 								local quadOffset = 0
 								if checkBeing[individual["species"]]["maxAge"] > 0 then
@@ -309,7 +307,9 @@ function love.update(dt)
 								local quad = love.graphics.newQuad(quadOffset*individual["sizeX"]+individual["quadX"],individual["sizeY"]+individual["quadY"],individual["sizeX"],individual["sizeY"],flowerSprite:getDimensions())
 								flowerBatches[individual["layer"]]:set(individual["batchID"], quad, individual["posX"], individual["posY"], 0, individual["scaleX"], individual["scaleY"])
 							else
-								individual["state"] = "happy"
+								if individual["state"] ~= "dead" then
+									individual["state"] = "happy"
+								end
 							end
 							-- die of thirst
 							if checkBeing[individual["species"]]["maxThirstyDays"] > 0 and individual["thirsty"] > checkBeing[individual["species"]]["maxThirstyDays"] then
@@ -532,6 +532,9 @@ function love.update(dt)
 		if suit.ImageButton(nil, menuIcons["movingBeings"], suit.layout:col()).hit then
 			menuState = toggleState(menuState, "movingBeings")
 		end
+		if suit.ImageButton(nil, menuIcons["statusReport"], suit.layout:col()).hit then
+			menuState = toggleState(menuState, "statusReport")
+		end
 		if suit.ImageButton(nil, menuIcons["menu"], suit.layout:col()).hit then
 			currentState = "menu"
 		end
@@ -638,6 +641,58 @@ function love.update(dt)
 					})
 				end
 				suit.Label(movingBeingsList[entry]["count"], suit.layout:col())
+			end
+		end
+
+		-- expose status report
+		if menuState == "statusReport" then
+			suit.layout:reset(love.graphics.getWidth()/2 - 400, love.graphics.getHeight()/2 - 400)
+			suit.layout:padding(10,10)
+			for species, content in pairs(stationaryBeingsList) do
+				local numHappy = 0
+				local numThirsty = 0
+				local numPollinated = 0
+				local numDead = 0
+				suit.layout:push(suit.layout:row(64,64))
+				suit.ImageButton(nil, stationaryBeingsMenuIcons[species], suit.layout:col(100,64))
+				for name, individual in pairs(stationaryBeings[species]) do
+					if individual["state"] == "happy" then
+						numHappy = numHappy + 1
+					end
+					if individual["state"] == "thirsty" then
+						numThirsty = numThirsty + 1
+					end
+					if individual["state"] == "dead" then
+						numDead = numDead + 1
+					end
+					if individual["pollinated"] then
+						numPollinated = numPollinated + 1
+					end
+				end
+				suit.Label("species: "..tostring(species), suit.layout:col(100,64))
+				suit.Label("count: "..tostring(#stationaryBeings[species] - numDead), suit.layout:col())
+				suit.Label("happy: "..tostring(numHappy), suit.layout:col())
+				suit.Label("thirsty: "..tostring(numThirsty), suit.layout:col())
+				suit.Label("pollinated: "..tostring(numPollinated), suit.layout:col())
+				suit.layout:pop()
+			end
+			for entry = 1, #movingBeingsList do
+				local numHappy = 0
+				local numDead = 0
+				suit.layout:push(suit.layout:row(64,64))
+				suit.ImageButton(nil, movingBeingsMenuIcons[entry], suit.layout:col(100,64))
+				for name, individual in pairs(movingBeings[movingBeingsList[entry]["species"]]) do
+					if individual["state"] == "happy" then
+						numHappy = numHappy + 1
+					end
+					if individual["state"] == "dead" then
+						numDead = numDead + 1
+					end
+				end
+				suit.Label("species: "..tostring(movingBeingsList[entry]["species"]), suit.layout:col(100,64))
+				suit.Label("count: "..tostring(#movingBeings[movingBeingsList[entry]["species"]] - numDead), suit.layout:col())
+				suit.Label("happy: "..tostring(numHappy), suit.layout:col())
+				suit.layout:pop()
 			end
 		end
 	end
