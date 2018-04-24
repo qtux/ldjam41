@@ -173,6 +173,8 @@ function love.load()
 	backgroundShader = love.graphics.newShader(shaderStr)
 	shaderStr = love.filesystem.read("shaders/day_night.frag")
 	dayNightShader = love.graphics.newShader(shaderStr)
+	shaderStr = love.filesystem.read("shaders/landscape.frag")
+	landscapeShader = love.graphics.newShader(shaderStr)
 	shaderStr = love.filesystem.read("shaders/wrap.frag")
 	wrapShader = love.graphics.newShader(shaderStr)
 
@@ -483,6 +485,7 @@ function love.update(dt)
 
 		-- update shaders
 		dayNightShader:send("intensity", state.sunIntensity)
+		landscapeShader:send("intensity", state.sunIntensity)
 		wrapShader:send("x_offset", state.view_offset / conf.world.w)
 		backgroundShader:send("intensity", state.sunIntensity)
 		backgroundShader:send("sun_x", conf.world.w / 4 * math.cos(state.t/3600/24 * 2 * math.pi + conf.t.sunPhase.value * math.pi) + conf.world.w / 2 + state.view_offset)
@@ -494,7 +497,7 @@ function love.update(dt)
 		love.graphics.clear()
 		love.graphics.setShader(backgroundShader)
 		love.graphics.rectangle('fill', 0, 0, conf.world.w, conf.world.h)
-		love.graphics.setShader(dayNightShader)
+		love.graphics.setShader(landscapeShader)
 		love.graphics.draw(landscape)
 		for index,value in ipairs(layers) do
 			for i = -1,1 do
