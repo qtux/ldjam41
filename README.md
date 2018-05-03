@@ -1,5 +1,7 @@
 # Ludum Dare 41
 
+see https://ldjam.com/events/ludum-dare/41/flower-defense
+
 ## How to Play
 
 Download a release or run it from source by cloning this repository
